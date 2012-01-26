@@ -236,9 +236,6 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 	s32 buffer_index = -1;
 	enum vdec_picture pic_type;
 	u32 ion_flag = 0;
-	u32 data1 = 0;
-	u32 data2 = 0;
-	struct vdec_output_frameinfo  *output_frame;
 
 	if (!client_ctx || !vcd_frame_data) {
 		ERR("vid_dec_input_frame_done() NULL pointer\n");
@@ -266,22 +263,12 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 	}
 
 	kernel_vaddr = (unsigned long)vcd_frame_data->virtual;
-/* HTC_START */
-	if (probe_kernel_address(kernel_vaddr, data1)) {
-		pr_info("Before vidc_lookup_addr_table: invalid address");
-	}
-/* HTC_END */
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 				      false, &user_vaddr, &kernel_vaddr,
 				      &phy_addr, &pmem_fd, &file,
 				      &buffer_index) ||
 		(vcd_frame_data->flags & VCD_FRAME_FLAG_EOS)) {
-/* HTC_START */
-		if (probe_kernel_address(kernel_vaddr, data2)) {
-			pr_info("After vidc_lookup_addr_table: invalid address");
-		}
-/* HTC_END */
 		/* Buffer address in user space */
 		vdec_msg->vdec_msg_info.msgdata.output_frame.bufferaddr =
 		    (u8 *) user_vaddr;
@@ -357,9 +344,6 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 	if (vcd_frame_data->data_len > 0) {
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
 				pmem_fd, kernel_vaddr, buffer_index);
-/* HTC_START */
-		rmb();
-/* HTC_END */
 		if (ion_flag == CACHED) {
 			invalidate_caches(kernel_vaddr,
 					(unsigned long)vcd_frame_data->data_len,
