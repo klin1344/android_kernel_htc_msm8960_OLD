@@ -2310,6 +2310,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		mdp4_dsi_cmd_dma_busy_wait(display1_mfd);
 		mdp4_overlay_update_layers(display1_mfd, MDP4_MIXER0);
 	}
+
 	perf_level = mdp4_overlay_get_perf_level(req, mfd);
 
 	mixer = mfd->panel_info.pdest;	/* DISPLAY_1 or DISPLAY_2 */
