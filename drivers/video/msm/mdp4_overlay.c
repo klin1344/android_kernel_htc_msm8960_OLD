@@ -2310,6 +2310,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		mdp4_dsi_cmd_dma_busy_wait(display1_mfd);
 		mdp4_overlay_update_layers(display1_mfd, MDP4_MIXER0);
 	}
+
 	perf_level = mdp4_overlay_get_perf_level(req, mfd);
 
 	mixer = mfd->panel_info.pdest;	/* DISPLAY_1 or DISPLAY_2 */
@@ -2323,7 +2324,7 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	}
 
 	if (mixer == MDP4_MIXER0) {
-		u32 use_blt = mdp4_overlay_blt_enable(req, mfd,	perf_level);
+		u32 use_blt = mdp4_overlay_blt_enable(req, mfd, perf_level);
 		mfd->use_ov0_blt &= ~(1 << (pipe->pipe_ndx-1));
 		mfd->use_ov0_blt |= (use_blt << (pipe->pipe_ndx-1));
 	}
