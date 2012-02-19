@@ -274,8 +274,8 @@ struct ddl_encoder_data{
 	u32  ext_enc_control_val;
 	u32  num_references_for_p_frame;
 	u32  closed_gop;
-	struct ddl_batch_frame_data batch_frame;
 	struct vcd_property_slice_delivery_info slice_delivery_info;
+	struct ddl_batch_frame_data batch_frame;
 };
 struct ddl_decoder_data {
 	struct ddl_codec_data_hdr  hdr;

@@ -974,6 +974,70 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 		}
 		break;
 	}
+	case VCD_I_SLICE_DELIVERY_MODE:
+	{
+		size_t output_buf_size;
+		u32 num_mb, num_slices;
+		struct vcd_property_hdr slice_property_hdr;
+		struct vcd_property_meta_data_enable slice_meta_data;
+		DDL_MSG_HIGH("Set property VCD_I_SLICE_DELIVERY_MODE\n");
+		if (sizeof(u32) == property_hdr->sz &&
+			encoder->codec.codec == VCD_CODEC_H264 &&
+			encoder->multi_slice.m_slice_sel
+				 == VCD_MSLICE_BY_MB_COUNT &&
+			DDLCLIENT_STATE_IS(ddl, DDL_CLIENT_OPEN)) {
+			encoder->slice_delivery_info.enable
+				= *(u32 *)property_value;
+			DDL_MSG_HIGH("set encoder->slice_delivery_mode"
+				"  = %u\n",
+				encoder->slice_delivery_info.enable);
+			output_buf_size =
+				encoder->client_output_buf_req.sz;
+			num_mb = DDL_NO_OF_MB(encoder->frame_size.width,
+					encoder->frame_size.height);
+			num_slices = num_mb/
+				encoder->multi_slice.m_slice_size;
+			num_slices = ((num_mb - num_slices *
+				encoder->multi_slice.m_slice_size) > 0)
+				? (num_slices + 1) : num_slices;
+			encoder->slice_delivery_info.num_slices =
+				num_slices;
+			if (num_slices <= DDL_MAX_NUM_BFRS_FOR_SLICE_BATCH) {
+				encoder->client_output_buf_req.min_count
+				= ((DDL_ENC_SLICE_BATCH_FACTOR * num_slices + 2)
+				> DDL_MAX_BUFFER_COUNT)
+				? DDL_MAX_BUFFER_COUNT :
+				(DDL_ENC_SLICE_BATCH_FACTOR * num_slices + 2);
+				output_buf_size =
+				encoder->client_output_buf_req.sz/num_slices;
+				encoder->client_output_buf_req.sz =
+				DDL_ALIGN(output_buf_size, DDL_KILO_BYTE(4));
+				encoder->output_buf_req =
+				encoder->client_output_buf_req;
+				DDL_MSG_HIGH("%s num_mb = %u num_slices = %u "
+				"output_buf_count = %u "
+				"output_buf_size = %u aligned size = %u\n",
+				__func__, num_mb, num_slices,
+				encoder->client_output_buf_req.min_count,
+				output_buf_size,
+				encoder->client_output_buf_req.sz);
+				slice_property_hdr.prop_id =
+					VCD_I_METADATA_ENABLE;
+				slice_property_hdr.sz =
+				sizeof(struct vcd_property_meta_data_enable);
+				ddl_get_metadata_params(ddl,
+						&slice_property_hdr,
+						&slice_meta_data);
+				slice_meta_data.meta_data_enable_flag
+					&= ~VCD_METADATA_ENC_SLICE;
+				ddl_set_metadata_params(ddl,
+						&slice_property_hdr,
+						&slice_meta_data);
+				vcd_status = VCD_S_SUCCESS;
+			}
+		}
+		break;
+	}
 	case VCD_REQ_PERF_LEVEL:
 		vcd_status = VCD_S_SUCCESS;
 		break;
