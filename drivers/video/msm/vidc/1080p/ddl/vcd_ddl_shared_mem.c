@@ -843,3 +843,24 @@ void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
 	DDL_MEM_WRITE_32(shared_mem, VIDC_SM_TIMEOUT_VALUE_ADDR,
 			timeout);
 }
+
+void vidc_sm_get_aspect_ratio_info(struct ddl_buf_addr *shared_mem,
+	struct vcd_aspect_ratio *aspect_ratio_info)
+{
+	u32 extended_par_info = 0;
+	aspect_ratio_info->aspect_ratio = DDL_MEM_READ_32(shared_mem,
+				VIDC_SM_ASPECT_RATIO_INFO_ADDR);
+
+	if (aspect_ratio_info->aspect_ratio == 0x0f) {
+		extended_par_info = DDL_MEM_READ_32(shared_mem,
+			VIDC_SM_EXTENDED_PAR_ADDR);
+		aspect_ratio_info->extended_par_width =
+			VIDC_GETFIELD(extended_par_info,
+			VIDC_SM_EXTENDED_PAR_WIDTH_BMSK,
+			VIDC_SM_EXTENDED_PAR_WIDTH_SHFT);
+		aspect_ratio_info->extended_par_height =
+			VIDC_GETFIELD(extended_par_info,
+			VIDC_SM_EXTENDED_PAR_HEIGHT_BMSK,
+			VIDC_SM_EXTENDED_PAR_HEIGHT_SHFT);
+	}
+}

@@ -236,6 +236,7 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 	s32 buffer_index = -1;
 	enum vdec_picture pic_type;
 	u32 ion_flag = 0;
+	struct vdec_output_frameinfo  *output_frame;
 
 	if (!client_ctx || !vcd_frame_data) {
 		ERR("vid_dec_input_frame_done() NULL pointer\n");
