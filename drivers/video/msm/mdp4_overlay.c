@@ -1384,14 +1384,8 @@ static void mdp4_mixer_stage_commit(int mixer)
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	}
 
-	if (data) {
-		if (pipe_cnt == 1) {
-			mdp4_update_perf_level(OVERLAY_PERF_LEVEL4);
-#ifdef CONFIG_MSM_BUS_SCALING
-			mdp_bus_scale_update_request(2);
-#endif
-		}
-	}
+	if (data && pipe_cnt == 1)
+		mdp4_update_perf_level(OVERLAY_PERF_LEVEL4);
 }
 
 void mdp4_mixer_stage_up(struct mdp4_overlay_pipe *pipe)
@@ -2054,9 +2048,7 @@ int mdp4_overlay_get(struct fb_info *info, struct mdp_overlay *req)
 #define OVERLAY_720P_TILE_SIZE  0x0E6000
 #define OVERLAY_WSVGA_SIZE 0x98000 /* 1024x608, align 600 to 32bit */
 
-#ifdef CONFIG_MSM_BUS_SCALING
 #define OVERLAY_BUS_SCALE_TABLE_BASE	6
-#endif
 
 static int mdp4_overlay_is_rgb_type(int format)
 {
@@ -2135,6 +2127,8 @@ void mdp4_set_perf_level(void)
 	if (old_perf_level != cur_perf_level) {
 		mdp_set_core_clk(cur_perf_level);
 		old_perf_level = cur_perf_level;
+		mdp_bus_scale_update_request(OVERLAY_BUS_SCALE_TABLE_BASE
+					     - cur_perf_level);
 	}
 }
 
@@ -2209,10 +2203,6 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	int ret, mixer, perf_level;
 	struct mdp4_overlay_pipe *pipe;
-	int i;
-	int mixer0_layer = 0;
-	int video_layer = 0;
-	struct mdp4_overlay_pipe *pipe_tmp;
 
 	if (mfd == NULL) {
 		pr_err("%s: mfd == NULL, -ENODEV\n", __func__);
@@ -2319,25 +2309,6 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		}
 	}
 	mutex_unlock(&mfd->dma->ov_mutex);
-
-#ifdef CONFIG_MSM_BUS_SCALING
-
-	for (i = OVERLAY_PIPE_RGB2; i <= OVERLAY_PIPE_VG2; i++) {
-		pipe_tmp = &ctrl->plist[i];
-		if (pipe_tmp->pipe_used && pipe_tmp->mixer_num == MDP4_MIXER0) {
-			mixer0_layer++;
-			if (!mdp4_overlay_is_rgb_type(pipe_tmp->src_format))
-				video_layer++;
-		}
-	}
-	if (pipe->mixer_num == MDP4_MIXER0 && (mdp_bus_scale_table_num() > OVERLAY_BUS_SCALE_TABLE_BASE) && (mixer0_layer > 1 || video_layer != 1)) {
-		//bypass case
-		mdp_bus_scale_update_request(OVERLAY_BUS_SCALE_TABLE_BASE + mixer0_layer - 1);
-	} else if (pipe->mixer_num == MDP4_MIXER0) {
-		mdp_bus_scale_update_request(OVERLAY_BUS_SCALE_TABLE_BASE
-						- perf_level);
-	}
-#endif
 
 	return 0;
 }

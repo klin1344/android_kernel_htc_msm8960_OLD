@@ -743,8 +743,13 @@ unsigned long mdp_get_core_clk(void);
 unsigned long mdp_perf_level2clk_rate(uint32 perf_level);
 
 #ifdef CONFIG_MSM_BUS_SCALING
-int mdp_bus_scale_update_request(uint32_t index);
 int mdp_bus_scale_table_num(void);
+int mdp_bus_scale_update_request(uint32_t index);
+#else
+static inline int mdp_bus_scale_update_request(uint32_t index)
+{
+	return 0;
+}
 #endif
 
 #ifdef MDP_HW_VSYNC
