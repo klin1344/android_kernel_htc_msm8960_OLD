@@ -804,6 +804,7 @@ static int wfd_open(struct file *filp)
 	vmops.op_buffer_done = venc_op_buffer_done;
 	vmops.ip_buffer_done = venc_ip_buffer_done;
 	vmops.cbdata = filp;
+	vmops.secure = wfd_dev->secure_device;
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl, OPEN,
 				(void *)&vmops);
 	if (rc || !vmops.cookie) {
