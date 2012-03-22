@@ -50,6 +50,7 @@
 #define VCD_I_META_BUFFER_MODE (VCD_START_BASE + 0x22)
 #define VCD_I_DISABLE_DMX (VCD_START_BASE + 0x23)
 #define VCD_I_DISABLE_DMX_SUPPORT (VCD_START_BASE + 0x24)
+#define VCD_I_ENABLE_SPS_PPS_FOR_IDR (VCD_START_BASE + 0x25)
 #define VCD_I_SLICE_DELIVERY_MODE (VCD_START_BASE + 0x27)
 
 #define VCD_START_REQ      (VCD_START_BASE + 0x1000)
@@ -346,6 +347,10 @@ struct vcd_property_buffer_size {
 	int height;
 	int size;
 	int alignment;
+};
+
+struct vcd_property_sps_pps_for_idr_enable {
+	u32 sps_pps_for_idr_enable_flag;
 };
 
 #endif
