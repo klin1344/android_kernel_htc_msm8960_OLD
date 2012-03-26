@@ -23,7 +23,6 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/hardware/gic.h>
-
 #include <mach/board.h>
 #include <mach/msm_iomap.h>
 
