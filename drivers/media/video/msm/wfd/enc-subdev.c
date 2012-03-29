@@ -1002,6 +1002,21 @@ set_framerate_fail:
 	return rc;
 }
 
+static long venc_set_max_perf_level(struct video_client_ctx *client_ctx,
+		int val)
+{
+	int rc = 0;
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_perf_level perf;
+	vcd_property_hdr.prop_id = VCD_REQ_PERF_LEVEL;
+	vcd_property_hdr.sz =
+		sizeof(struct vcd_property_perf_level);
+	perf.level = VCD_PERF_LEVEL2;
+	rc = vcd_set_property(client_ctx->vcd_handle,
+				&vcd_property_hdr, &perf);
+	return rc;
+}
+
 static long venc_alloc_input_buffer(struct v4l2_subdev *sd, void *arg)
 {
 	struct mem_region *mregion = arg;
@@ -1279,6 +1294,9 @@ static long venc_set_property(struct v4l2_subdev *sd, void *arg)
 		break;
 	case V4L2_CID_MPEG_MFC51_VIDEO_FORCE_FRAME_TYPE:
 		rc = venc_request_frame(client_ctx, ctrl->value);
+		break;
+	case V4L2_CID_MPEG_QCOM_SET_PERF_LEVEL:
+		rc = venc_set_max_perf_level(client_ctx, ctrl->value);
 		break;
 	default:
 		WFD_MSG_ERR("Set property not suported: %d\n", ctrl->id);
