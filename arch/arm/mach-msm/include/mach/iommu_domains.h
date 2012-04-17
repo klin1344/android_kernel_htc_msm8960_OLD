@@ -111,6 +111,7 @@ static inline int msm_iommu_map_extra(struct iommu_domain *domain,
 						int cached)
 {
 	return -ENODEV;
+
 }
 
 static inline void msm_iommu_unmap_extra(struct iommu_domain *domain,
@@ -128,7 +129,16 @@ static inline int msm_iommu_map_contig_buffer(unsigned long phys,
 				unsigned long cached,
 				unsigned long *iova_val)
 {
+	*iova_val = phys;
 	return 0;
+}
+
+static inline void msm_iommu_unmap_contig_buffer(unsigned long iova,
+					unsigned int domain_no,
+					unsigned int partition_no,
+					unsigned long size)
+{
+	return;
 }
 
 #endif
