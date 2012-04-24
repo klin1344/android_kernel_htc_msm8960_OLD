@@ -984,6 +984,294 @@ static long venc_set_framerate(struct v4l2_subdev *sd,
 	return rc;
 }
 
+static long venc_set_qp_value(struct video_client_ctx *client_ctx,
+		__s32 frametype, __s32 qp)
+{
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_session_qp vcd_property_session_qp;
+	int rc = 0;
+
+	if (!client_ctx) {
+		WFD_MSG_ERR("Invalid parameters\n");
+		return -EINVAL;
+	}
+
+	vcd_property_hdr.prop_id = VCD_I_SESSION_QP;
+	vcd_property_hdr.sz = sizeof(vcd_property_session_qp);
+
+	rc = vcd_get_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&vcd_property_session_qp);
+
+	if (rc) {
+		WFD_MSG_ERR("Failed to get session qp\n");
+		goto err;
+	}
+
+	switch (frametype) {
+	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
+		vcd_property_session_qp.i_frame_qp = qp;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP:
+		vcd_property_session_qp.p_frame_qp = qp;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP:
+		vcd_property_session_qp.b_frame_qp = qp;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_MPEG4_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_MPEG4_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_MPEG4_B_FRAME_QP:
+		rc = -ENOTSUPP;
+		goto err;
+	default:
+		rc = -EINVAL;
+		goto err;
+	}
+
+
+	rc = vcd_set_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&vcd_property_session_qp);
+
+	if (rc) {
+		WFD_MSG_ERR("Failed to set session qp\n");
+		goto err;
+	}
+err:
+	return rc;
+}
+
+static long venc_get_qp_value(struct video_client_ctx *client_ctx,
+		__s32 frametype, __s32 *qp)
+{
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_session_qp vcd_property_session_qp;
+	int rc = 0;
+
+	if (!client_ctx) {
+		WFD_MSG_ERR("Invalid parameters\n");
+		return -EINVAL;
+	}
+
+	vcd_property_hdr.prop_id = VCD_I_SESSION_QP;
+	vcd_property_hdr.sz = sizeof(vcd_property_session_qp);
+
+	rc = vcd_get_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&vcd_property_session_qp);
+
+	if (rc) {
+		WFD_MSG_ERR("Failed to get session qp\n");
+		goto err;
+	}
+
+	switch (frametype) {
+	case V4L2_CID_MPEG_VIDEO_MPEG4_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
+		*qp = vcd_property_session_qp.i_frame_qp;
+		break;
+	case V4L2_CID_MPEG_VIDEO_MPEG4_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP:
+		*qp = vcd_property_session_qp.p_frame_qp;
+		break;
+	case V4L2_CID_MPEG_VIDEO_MPEG4_B_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP:
+		*qp = vcd_property_session_qp.b_frame_qp;
+		break;
+	default:
+		rc = -EINVAL;
+		goto err;
+	}
+
+err:
+	return rc;
+}
+
+static long venc_set_qp_range(struct video_client_ctx *client_ctx,
+		__s32 type, __s32 qp)
+{
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_qp_range vcd_property_qp_range;
+	int rc = 0;
+
+	if (!client_ctx) {
+		WFD_MSG_ERR("Invalid parameters\n");
+		return -EINVAL;
+	}
+
+	vcd_property_hdr.prop_id = VCD_I_QP_RANGE;
+	vcd_property_hdr.sz = sizeof(vcd_property_qp_range);
+
+	rc = vcd_get_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&vcd_property_qp_range);
+
+	if (rc) {
+		WFD_MSG_ERR("Failed to get qp range\n");
+		goto err;
+	}
+
+	switch (type) {
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_MIN_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
+		vcd_property_qp_range.min_qp = qp;
+		break;
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_MAX_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_MAX_QP:
+		vcd_property_qp_range.max_qp = qp;
+		break;
+	default:
+		rc = -EINVAL;
+		goto err;
+	}
+
+	rc = vcd_set_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&vcd_property_qp_range);
+
+	if (rc) {
+		WFD_MSG_ERR("Failed to set qp range\n");
+		goto err;
+	}
+err:
+	return rc;
+}
+
+static long venc_get_qp_range(struct video_client_ctx *client_ctx,
+		__s32 type, __s32 *qp)
+{
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_qp_range vcd_property_qp_range;
+	int rc = 0;
+
+	if (!client_ctx) {
+		WFD_MSG_ERR("Invalid parameters\n");
+		return -EINVAL;
+	}
+
+	vcd_property_hdr.prop_id = VCD_I_QP_RANGE;
+	vcd_property_hdr.sz = sizeof(vcd_property_qp_range);
+
+	rc = vcd_get_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&vcd_property_qp_range);
+
+	if (rc) {
+		WFD_MSG_ERR("Failed to get qp range\n");
+		goto err;
+	}
+
+	switch (type) {
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_MIN_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
+		*qp = vcd_property_qp_range.min_qp;
+		break;
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_MAX_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_MAX_QP:
+		*qp = vcd_property_qp_range.max_qp;
+		break;
+	default:
+		rc = -EINVAL;
+		goto err;
+	}
+
+	rc = vcd_set_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&vcd_property_qp_range);
+
+	if (rc) {
+		WFD_MSG_ERR("Failed to set qp range\n");
+		goto err;
+	}
+err:
+	return rc;
+}
+static long venc_set_max_perf_level(struct video_client_ctx *client_ctx,
+		int val)
+{
+	int rc = 0;
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_perf_level perf;
+	vcd_property_hdr.prop_id = VCD_REQ_PERF_LEVEL;
+	vcd_property_hdr.sz =
+		sizeof(struct vcd_property_perf_level);
+	perf.level = VCD_PERF_LEVEL2;
+	rc = vcd_set_property(client_ctx->vcd_handle,
+				&vcd_property_hdr, &perf);
+	return rc;
+}
+static long venc_set_header_mode(struct video_client_ctx *client_ctx,
+		__s32 mode)
+{
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_sps_pps_for_idr_enable sps_pps_for_idr_enable;
+	int rc = 0;
+
+	if (!client_ctx) {
+		WFD_MSG_ERR("Invalid parameters\n");
+		rc = -EINVAL;
+		goto err;
+	}
+
+	vcd_property_hdr.prop_id = VCD_I_ENABLE_SPS_PPS_FOR_IDR;
+	vcd_property_hdr.sz = sizeof(sps_pps_for_idr_enable);
+	switch (mode) {
+	case V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE:
+		sps_pps_for_idr_enable.sps_pps_for_idr_enable_flag = 0;
+		break;
+	case V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_I_FRAME:
+		sps_pps_for_idr_enable.sps_pps_for_idr_enable_flag = 1;
+		break;
+	case V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME:
+	default:
+		WFD_MSG_ERR("Video header mode %d not supported\n",
+				mode);
+		rc = -ENOTSUPP;
+		goto err;
+	}
+
+	rc =  vcd_set_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&sps_pps_for_idr_enable);
+	if (rc) {
+		WFD_MSG_ERR("Failed to set enable_sps_pps_for_idr\n");
+		goto err;
+	}
+err:
+	return rc;
+}
+
+static long venc_get_header_mode(struct video_client_ctx *client_ctx,
+		__s32 *mode)
+{
+	struct vcd_property_hdr vcd_property_hdr;
+	struct vcd_property_sps_pps_for_idr_enable sps_pps_for_idr_enable;
+	int rc = 0;
+
+	if (!client_ctx) {
+		WFD_MSG_ERR("Invalid parameters\n");
+		rc = -EINVAL;
+		goto err;
+	}
+
+	vcd_property_hdr.prop_id = VCD_I_ENABLE_SPS_PPS_FOR_IDR;
+	vcd_property_hdr.sz = sizeof(sps_pps_for_idr_enable);
+	rc =  vcd_get_property(client_ctx->vcd_handle, &vcd_property_hdr,
+			&sps_pps_for_idr_enable);
+	if (rc) {
+		WFD_MSG_ERR("Failed to get sps/pps for idr enable\n");
+		goto err;
+	}
+
+	*mode = sps_pps_for_idr_enable.sps_pps_for_idr_enable_flag ?
+		V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_I_FRAME :
+		V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE;
+err:
+	return rc;
+}
+
 static long venc_alloc_input_buffer(struct v4l2_subdev *sd, void *arg)
 {
 	struct mem_region *mregion = arg;
@@ -1257,6 +1545,31 @@ static long venc_set_property(struct v4l2_subdev *sd, void *arg)
 		break;
 	case V4L2_CID_MPEG_MFC51_VIDEO_FORCE_FRAME_TYPE:
 		rc = venc_request_frame(client_ctx, ctrl->value);
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_MPEG4_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_MPEG4_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_MPEG4_B_FRAME_QP:
+		rc = venc_set_qp_value(client_ctx, ctrl->id, ctrl->value);
+		break;
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP:
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_MIN_QP:
+	case V4L2_CID_MPEG_VIDEO_H263_MAX_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
+	case V4L2_CID_MPEG_VIDEO_H264_MAX_QP:
+		rc = venc_set_qp_range(client_ctx, ctrl->id, ctrl->value);
+		break;
+	case V4L2_CID_MPEG_VIDEO_HEADER_MODE:
+		rc = venc_set_header_mode(client_ctx, ctrl->value);
+		break;
+	case V4L2_CID_MPEG_QCOM_SET_PERF_LEVEL:
+		rc = venc_set_max_perf_level(client_ctx, ctrl->value);
 		break;
 	default:
 		WFD_MSG_ERR("Set property not suported: %d\n", ctrl->id);
