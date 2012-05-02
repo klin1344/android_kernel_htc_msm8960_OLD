@@ -203,6 +203,7 @@ struct msm_fb_data_type {
 	struct work_struct cabc_work;
 	struct timer_list cabc_update_timer;
 #endif
+	bool writeback_active_cnt;
 };
 
 struct dentry *msm_fb_get_debugfs_root(void);
