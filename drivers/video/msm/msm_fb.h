@@ -147,6 +147,7 @@ struct msm_fb_data_type {
 	__u32 var_xres;
 	__u32 var_yres;
 	__u32 var_pixclock;
+	__u32 var_frame_rate;
 #if 1 /* HTC_CSP_START */
 	uint32_t width;
 	uint32_t height;
@@ -239,5 +240,7 @@ extern int msmfb_get_fb_area(void);
 
 void fill_black_screen(void);
 void unfill_black_screen(void);
+int msm_fb_check_frame_rate(struct msm_fb_data_type *mfd,
+				struct fb_info *info);
 
 #endif /* MSM_FB_H */
