@@ -724,7 +724,7 @@ static void __init ville_early_memory(void)
 static void __init ville_reserve(void)
 {
 	msm_reserve();
-	fmem_pdata.phys = reserve_memory_for_fmem(fmem_pdata.size);
+	fmem_pdata.phys = reserve_memory_for_fmem(fmem_pdata.size, fmem_pdata.align);
 }
 static int msm8960_change_memory_power(u64 start, u64 size,
 	int change_type)

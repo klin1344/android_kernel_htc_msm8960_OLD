@@ -80,6 +80,10 @@
 #include <mach/ion.h>
 #include <mach/mdm2.h>
 #include <mach/mdm-peripheral.h>
+#include <mach/msm_rtb.h>
+#include <mach/msm_cache_dump.h>
+#include <mach/scm.h>
+#include <mach/iommu_domains.h>
 
 #include <linux/fmem.h>
 
@@ -143,6 +147,17 @@ struct sx150x_platform_data msm8960_sx150x_data[] = {
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 #define MSM_PMEM_KERNEL_EBI1_SIZE  0x280000
 #define MSM_ION_SF_SIZE		MSM_PMEM_SIZE
+#ifdef CONFIG_MSM_IOMMU
+#define MSM_ION_MM_SIZE            0x3800000 /* Need to be multiple of 64K */
+#define MSM_ION_SF_SIZE            0x0
+#define MSM_ION_QSECOM_SIZE        0x780000 /* (7.5MB) */
+#define MSM_ION_HEAP_NUM	7
+#else
+#define MSM_ION_MM_SIZE            MSM_PMEM_ADSP_SIZE
+#define MSM_ION_SF_SIZE            MSM_PMEM_SIZE
+#define MSM_ION_QSECOM_SIZE        0x600000 /* (6MB) */
+#define MSM_ION_HEAP_NUM	8
+#endif
 #define MSM_ION_MM_FW_SIZE	0x200000 /* (2MB) */
 #define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
 #define MSM_ION_QSECOM_SIZE	0x100000 /* (1MB) */
@@ -324,10 +339,12 @@ static int msm8960_paddr_to_memtype(unsigned int paddr)
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
 	.permission_type = IPT_TYPE_MM_CARVEOUT,
-	.align = PAGE_SIZE,
+	.align = SZ_64K,
 	.reusable = FMEM_ENABLED,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
+	.iommu_map_all = 1,
+	.iommu_2x_map_domain = VIDEO_DOMAIN,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
@@ -504,6 +521,7 @@ static void __init reserve_ion_memory(void)
 	fmem_pdata.size = 0;
 	fmem_pdata.reserved_size_low = 0;
 	fmem_pdata.reserved_size_high = 0;
+	fmem_pdata.align = PAGE_SIZE;
 	fixed_low_size = 0;
 	fixed_middle_size = 0;
 	fixed_high_size = 0;
@@ -512,7 +530,8 @@ static void __init reserve_ion_memory(void)
 	 * is specified as reusable and set as non-reusable if found.
 	 */
 	for (i = 0; i < ion_pdata.nr; ++i) {
-		const struct ion_platform_heap *heap = &(ion_pdata.heaps[i]);
+		const struct ion_platform_heap *heap =
+						&(ion_pdata.heaps[i]);
 
 		if (heap->type == ION_HEAP_TYPE_CP && heap->extra_data) {
 			struct ion_cp_heap_pdata *data = heap->extra_data;
@@ -529,7 +548,11 @@ static void __init reserve_ion_memory(void)
 	}
 
 	for (i = 0; i < ion_pdata.nr; ++i) {
-		const struct ion_platform_heap *heap = &(ion_pdata.heaps[i]);
+		struct ion_platform_heap *heap =
+						&(ion_pdata.heaps[i]);
+		int align = SZ_4K;
+		int iommu_map_all = 0;
+		int adjacent_mem_id = INVALID_HEAP_ID;
 
 		if (heap->extra_data) {
 			int fixed_position = NOT_FIXED;
@@ -541,16 +564,34 @@ static void __init reserve_ion_memory(void)
 					heap->extra_data)->mem_is_fmem;
 				fixed_position = ((struct ion_cp_heap_pdata *)
 					heap->extra_data)->fixed_position;
+				align = ((struct ion_cp_heap_pdata *)
+						heap->extra_data)->align;
+				iommu_map_all =
+					((struct ion_cp_heap_pdata *)
+					heap->extra_data)->iommu_map_all;
 				break;
 			case ION_HEAP_TYPE_CARVEOUT:
 				mem_is_fmem = ((struct ion_co_heap_pdata *)
 					heap->extra_data)->mem_is_fmem;
 				fixed_position = ((struct ion_co_heap_pdata *)
 					heap->extra_data)->fixed_position;
+				adjacent_mem_id = ((struct ion_co_heap_pdata *)
+					heap->extra_data)->adjacent_mem_id;
 				break;
 			default:
 				break;
 			}
+
+			if (iommu_map_all) {
+				if (heap->size & (SZ_64K-1)) {
+					heap->size = ALIGN(heap->size, SZ_64K);
+					pr_info("Heap %s not aligned to 64K. Adjusting size to %x\n",
+						heap->name, heap->size);
+				}
+			}
+
+			if (mem_is_fmem && adjacent_mem_id != INVALID_HEAP_ID)
+				fmem_pdata.align = align;
 
 			if (fixed_position != NOT_FIXED)
 				fixed_size += heap->size;
@@ -699,6 +740,7 @@ static void __init msm8960_early_memory(void)
 static void __init msm8960_reserve(void)
 {
 	msm_reserve();
+<<<<<<< HEAD
 	if (fmem_pdata.size) {
 #if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
 		fmem_pdata.phys = reserve_info->fixed_area_start +
@@ -711,6 +753,9 @@ static void __init msm8960_reserve(void)
 		fmem_pdata.phys = reserve_memory_for_fmem(fmem_pdata.size);
 #endif
 	}
+=======
+	fmem_pdata.phys = reserve_memory_for_fmem(fmem_pdata.size, fmem_pdata.align);
+>>>>>>> gpu: ion: Map everything into IOMMU with 64K pages.
 }
 
 static int msm8960_change_memory_power(u64 start, u64 size,
