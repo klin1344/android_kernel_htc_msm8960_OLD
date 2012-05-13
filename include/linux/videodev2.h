@@ -1364,6 +1364,10 @@ enum v4l2_mpeg_cx2341x_video_median_filter_type {
 #define V4L2_CID_MPEG_QCOM_BASE	(V4L2_CTRL_CLASS_MPEG | 0x2100)
 
 #define V4L2_CID_MPEG_QCOM_SET_PERF_LEVEL (V4L2_CID_MPEG_QCOM_BASE + 0)
+enum v3l2_mpeg_qcom_perf_level {
+	V4L2_CID_MPEG_QCOM_PERF_LEVEL_PERFORMANCE		= 0,
+	V4L2_CID_MPEG_QCOM_PERF_LEVEL_TURBO			= 1,
+};
 
 /*  Camera class control IDs */
 #define V4L2_CID_CAMERA_CLASS_BASE 	(V4L2_CTRL_CLASS_CAMERA | 0x900)
