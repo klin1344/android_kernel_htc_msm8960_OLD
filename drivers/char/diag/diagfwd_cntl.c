@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,9 +16,6 @@
 #include "diagchar.h"
 #include "diagfwd.h"
 #include "diagfwd_cntl.h"
-#ifdef CONFIG_DIAG_OVER_USB
-#include <mach/usbdiag.h>
-#endif
 
 #define HDR_SIZ 8
 
@@ -37,7 +34,11 @@ void diag_smd_cntl_notify(void *ctxt, unsigned event)
 			queue_work(driver->diag_wq,
 				 &(driver->diag_read_smd_cntl_work));
 		else
-			pr_info("diag: incomplete pkt on Modem CNTL ch\n");
+			pr_debug("diag: incomplete pkt on Modem CNTL ch\n");
+		break;
+	case SMD_EVENT_OPEN:
+		queue_work(driver->diag_cntl_wq,
+			 &(driver->diag_modem_mask_update_work));
 		break;
 	}
 }
@@ -57,7 +58,11 @@ void diag_smd_qdsp_cntl_notify(void *ctxt, unsigned event)
 			queue_work(driver->diag_wq,
 				 &(driver->diag_read_smd_qdsp_cntl_work));
 		else
-			pr_info("diag: incomplete pkt on LPASS CNTL ch\n");
+			pr_debug("diag: incomplete pkt on LPASS CNTL ch\n");
+		break;
+	case SMD_EVENT_OPEN:
+		queue_work(driver->diag_cntl_wq,
+			 &(driver->diag_qdsp_mask_update_work));
 		break;
 	}
 }
@@ -77,7 +82,11 @@ void diag_smd_wcnss_cntl_notify(void *ctxt, unsigned event)
 			queue_work(driver->diag_wq,
 				 &(driver->diag_read_smd_wcnss_cntl_work));
 		else
-			pr_info("diag: incomplete pkt on WCNSS CNTL ch\n");
+			pr_debug("diag: incomplete pkt on WCNSS CNTL ch\n");
+		break;
+	case SMD_EVENT_OPEN:
+		queue_work(driver->diag_cntl_wq,
+			 &(driver->diag_wcnss_mask_update_work));
 		break;
 	}
 }
@@ -90,12 +99,8 @@ static void diag_smd_cntl_send_req(int proc_num)
 	struct diag_ctrl_msg *msg;
 	struct cmd_code_range *range;
 	struct bindpkt_params *temp;
-	void *buf = NULL, *dump_buf = NULL;
+	void *buf = NULL;
 	smd_channel_t *smd_ch = NULL;
-
-	DIAG_INFO("%s: %s\n", __func__,
-		(proc_num == MODEM_PROC)?"MODEM_PROC":
-		(proc_num == QDSP_PROC)?"QDSP_PROC":"WCNSS_PROC");
 
 	if (pkt_params == NULL) {
 		pr_alert("diag: Memory allocation failure\n");
@@ -148,16 +153,6 @@ static void diag_smd_cntl_send_req(int proc_num)
 			count_bytes = count_bytes+HDR_SIZ+data_len;
 			if (type == DIAG_CTRL_MSG_REG && r >= count_bytes) {
 				msg = buf+HDR_SIZ;
-				if (!msg->count_entries) {
-					DIAG_ERR("version: %d, cmd_code: %d,"
-						" subsysid: %d, count_entries: %d,"
-						" port:%d\n", msg->version,
-						msg->cmd_code, msg->subsysid,
-						msg->count_entries, msg->port);
-					dump_buf = kmalloc(r, GFP_KERNEL);
-					memcpy(dump_buf, buf, r);
-					continue;
-				}
 				range = buf+HDR_SIZ+
 						sizeof(struct diag_ctrl_msg);
 				pkt_params->count = msg->count_entries;
@@ -186,11 +181,6 @@ static void diag_smd_cntl_send_req(int proc_num)
 			}
 			buf = buf + HDR_SIZ + data_len;
 		}
-	}
-	if (dump_buf) {
-		print_hex_dump(KERN_DEBUG, "diag_debug_buf:",
-			16, 1, DUMP_PREFIX_ADDRESS, dump_buf, r, 1);
-		kfree(dump_buf);
 	}
 	kfree(pkt_params);
 	if (flag) {
@@ -223,7 +213,7 @@ static int diag_smd_cntl_probe(struct platform_device *pdev)
 {
 	int r = 0;
 
-	/* open control ports only on 8960 */
+	/* open control ports only on 8960 & newer targets */
 	if (chk_apps_only()) {
 		if (pdev->id == SMD_APPS_MODEM)
 			r = smd_open("DIAG_CNTL", &driver->ch_cntl, driver,
@@ -280,6 +270,7 @@ static struct platform_driver diag_smd_lite_cntl_driver = {
 
 void diagfwd_cntl_init(void)
 {
+	driver->diag_cntl_wq = create_singlethread_workqueue("diag_cntl_wq");
 	if (driver->buf_in_cntl == NULL) {
 		driver->buf_in_cntl = kzalloc(IN_BUF_SIZE, GFP_KERNEL);
 		if (driver->buf_in_cntl == NULL)
@@ -304,6 +295,8 @@ err:
 		kfree(driver->buf_in_cntl);
 		kfree(driver->buf_in_qdsp_cntl);
 		kfree(driver->buf_in_wcnss_cntl);
+		if (driver->diag_cntl_wq)
+			destroy_workqueue(driver->diag_cntl_wq);
 }
 
 void diagfwd_cntl_exit(void)
@@ -314,6 +307,7 @@ void diagfwd_cntl_exit(void)
 	driver->ch_cntl = 0;
 	driver->chqdsp_cntl = 0;
 	driver->ch_wcnss_cntl = 0;
+	destroy_workqueue(driver->diag_cntl_wq);
 	platform_driver_unregister(&msm_smd_ch1_cntl_driver);
 	platform_driver_unregister(&diag_smd_lite_cntl_driver);
 
