@@ -224,8 +224,7 @@ static int i2c_atmel_write(struct i2c_client *client, uint16_t address, uint8_t 
 
 static int i2c_atmel_write_byte_data(struct i2c_client *client, uint16_t address, uint8_t value)
 {
-	i2c_atmel_write(client, address, &value, 1);
-	return 0;
+	return i2c_atmel_write(client, address, &value, 1);
 }
 
 static uint16_t get_object_address(struct atmel_ts_data *ts, uint8_t object_type)
@@ -330,8 +329,7 @@ static ssize_t stop_touch_show(struct device *dev, struct device_attribute *attr
 
 DEVICE_ATTR(disable_touch, (S_IWUSR|S_IRUGO), stop_touch_show, stop_touch);
 
-static ssize_t atmel_gpio_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+static ssize_t atmel_gpio_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int ret = 0;
 	struct atmel_ts_data *ts_data;
@@ -348,8 +346,7 @@ static ssize_t atmel_gpio_show(struct device *dev,
 }
 static DEVICE_ATTR(gpio, S_IRUGO, atmel_gpio_show, NULL);
 
-static ssize_t atmel_vendor_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+static ssize_t atmel_vendor_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int ret = 0;
 	struct atmel_ts_data *ts_data;
@@ -364,8 +361,7 @@ static DEVICE_ATTR(vendor, S_IRUGO, atmel_vendor_show, NULL);
 
 static unsigned long atmel_reg_addr;
 
-static ssize_t atmel_register_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+static ssize_t atmel_register_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int ret = 0;
 	uint8_t ptr[1] = { 0 };
@@ -613,7 +609,6 @@ static ssize_t atmel_diag_show(struct device *dev,
 		i2c_atmel_write_byte_data(ts_data->client,
 			get_object_address(ts_data, GEN_COMMANDPROCESSOR_T6) +
 			T6_CFG_DIAG, T6_CFG_DIAG_CMD_PAGEUP);
-
 	}
 
 	return count;
@@ -674,11 +669,10 @@ static ssize_t atmel_unlock_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(unlock, (S_IWUSR|S_IRUGO),
-	NULL, atmel_unlock_store);
+static DEVICE_ATTR(unlock, (S_IWUSR|S_IRUGO), NULL, atmel_unlock_store);
 
 static ssize_t atmel_info_show(struct device *dev,
-        struct device_attribute *attr, char *buf)
+			       struct device_attribute *attr, char *buf)
 {
 	size_t count = 0;
 	count += sprintf(buf, "Type B/mtsize/new filter/INT\n");
@@ -810,7 +804,6 @@ static ssize_t atmel_fake_event_store(struct device *dev,
 	}
 
 	return count;
-
 }
 
 static DEVICE_ATTR(fake_event, (S_IWUSR|S_IRUGO),
@@ -870,11 +863,11 @@ static int atmel_touch_sysfs_init(void)
 		printk(KERN_ERR "[TP]TOUCH_ERR: create_file htc_event failed\n");
 		return ret;
 	}
-        ret = sysfs_create_file(android_touch_kobj, &dev_attr_report_type.attr);
-        if (ret) {
-                printk(KERN_ERR "[TP]TOUCH_ERR: create_file report_type failed\n");
-                return ret;
-        }
+	ret = sysfs_create_file(android_touch_kobj, &dev_attr_report_type.attr);
+	if (ret) {
+		printk(KERN_ERR "[TP]TOUCH_ERR: create_file report_type failed\n");
+		return ret;
+	}
 	ret = sysfs_create_file(android_touch_kobj, &dev_attr_disable_touch.attr);
 	if (ret) {
 		printk(KERN_ERR "[TP]TOUCH_ERR: create_file disable_touch failed\n");
@@ -1083,7 +1076,7 @@ static void msg_process_multitouch(struct atmel_ts_data *ts, uint8_t *data, uint
 			ts->grip_suppression &= ~BIT(idx);
 		if (ts->finger_pressed & BIT(idx)) {
 			if (ts->report_type == SYN_AND_REPORT_TYPE_B) {
-	                        input_mt_slot(ts->input_dev, idx);
+				input_mt_slot(ts->input_dev, idx);
 				input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
 				input_sync(ts->input_dev);
 			}
@@ -1237,7 +1230,7 @@ static void compatible_input_report(struct input_dev *idev,
 				struct atmel_finger_data *fdata, uint8_t press, uint8_t last, uint8_t report_type, uint8_t slot_num)
 {
 	if (report_type == SYN_AND_REPORT_TYPE_B) {
-	        if (!press) {
+		if (!press) {
 			input_mt_slot(idev, slot_num);
 			input_mt_report_slot_state(idev, MT_TOOL_FINGER, 0);
 		} else {
@@ -1248,9 +1241,9 @@ static void compatible_input_report(struct input_dev *idev,
 			input_report_abs(idev, ABS_MT_WIDTH_MAJOR, fdata->w);
 			input_report_abs(idev, ABS_MT_POSITION_X, fdata->x);
 			input_report_abs(idev, ABS_MT_POSITION_Y, fdata->y);
-	        }
+		}
 	} else {
-	        if (!press)
+		if (!press)
 			input_mt_sync(idev);
 		else {
 			input_report_abs(idev, ABS_MT_PRESSURE, fdata->z);
@@ -1259,7 +1252,7 @@ static void compatible_input_report(struct input_dev *idev,
 			input_report_abs(idev, ABS_MT_POSITION_X, fdata->x);
 			input_report_abs(idev, ABS_MT_POSITION_Y, fdata->y);
 			input_mt_sync(idev);
-	        }
+		}
 	}
 }
 
@@ -1377,21 +1370,22 @@ static irqreturn_t atmel_irq_thread(int irq, void *ptr)
 	}
 
 	if (ts->report_type == SYN_AND_REPORT_TYPE_B) {
-                if (!ts->finger_count || ts->face_suppression) {
-                        ts->finger_pressed = 0;
-                        ts->finger_count = 0;
+		if (!ts->finger_count || ts->face_suppression) {
+			ts->finger_pressed = 0;
+			ts->finger_count = 0;
 
-                        if (ts->debug_log_level & 0x2)
-                                printk(KERN_INFO "[TP]Finger leave\n");
-                } else {
-                        if (ts->repeat_flag == 0) {
-                                multi_input_report(ts);
-                                if (htc_event_enable == 0 || disable_touch == 0)
-                                        input_sync(ts->input_dev);
-                        }
-                }
+			if (ts->debug_log_level & 0x2)
+				printk(KERN_INFO "[TP]Finger leave\n");
+		} else {
+			if (ts->repeat_flag == 0) {
+				multi_input_report(ts);
+				if (htc_event_enable == 0 || disable_touch == 0)
+					input_sync(ts->input_dev);
+			}
+		}
 	} else {
 		if (!ts->finger_count || ts->face_suppression) {
+			printk(KERN_INFO "[TP] Total finger count: %d\n", ts->finger_count);
 			ts->finger_pressed = 0;
 			ts->finger_count = 0;
 			if (htc_event_enable == 0)
@@ -1621,7 +1615,7 @@ static void cable_tp_status_handler_func(int connect_status)
 				i2c_atmel_write_byte_data(ts->client,
 					get_object_address(ts, ts->cable_config.cfg[i].objid) +
 					ts->cable_config.cfg[i].byte,
-					ts->status ?  (ts->cable_config.cfg[i].value) : (ts->cable_config.cfg[i].orival));
+					ts->status ? (ts->cable_config.cfg[i].value) : (ts->cable_config.cfg[i].orival));
 
 			if (ts->status == NONE && ts->noiseLine_status) {
 				i2c_atmel_write_byte_data(ts->client,
@@ -1702,8 +1696,8 @@ static int read_object_table(struct atmel_ts_data *ts)
 
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_DETECT_CABLE)
 static struct t_cable_status_notifier cable_status_handler = {
-    .name = "usb_tp_connected",
-    .func = cable_tp_status_handler_func,
+	.name = "usb_tp_connected",
+	.func = cable_tp_status_handler_func,
 };
 #endif
 
@@ -1769,8 +1763,7 @@ static void erase_config(struct atmel_ts_data *ts_data, int intr)
 	msleep(100);
 }
 
-static int atmel_224e_ts_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int atmel_224e_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct atmel_ts_data *ts;
 	struct atmel_i2c_platform_data *pdata;
@@ -2022,7 +2015,7 @@ static int atmel_224e_ts_probe(struct i2c_client *client,
 				for (loop_i = 0; loop_i < 3; loop_i++) {
 					if (pdata->object_crc[loop_i] !=
 						data[T6_MSG_CHECKSUM + loop_i]) {
-                                                printk(KERN_INFO
+						printk(KERN_INFO
 							"[TP]CRC Error: DRV=0x%2.2X,0x%2.2X,0x%2.2X  NV=0x%2.2X,0x%2.2X,0x%2.2X\n",
 							pdata->object_crc[0],
 							pdata->object_crc[1],
@@ -2605,4 +2598,3 @@ module_exit(atmel_224e_ts_exit);
 
 MODULE_DESCRIPTION("ATMEL Touch driver");
 MODULE_LICENSE("GPL");
-
