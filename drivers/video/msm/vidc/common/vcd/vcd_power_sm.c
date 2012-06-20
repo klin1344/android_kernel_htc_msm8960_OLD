@@ -312,7 +312,6 @@ u32 vcd_set_perf_turbo_level(struct vcd_clnt_ctxt *cctxt)
 		return false;
 	}
 	dev_ctxt->curr_perf_lvl = RESTRK_1080P_TURBO_PERF_LEVEL;
-	vcd_update_decoder_perf_level(dev_ctxt, RESTRK_1080P_TURBO_PERF_LEVEL);
 #endif
 	return rc;
 }
@@ -383,4 +382,3 @@ u32 vcd_un_gate_clock(struct vcd_dev_ctxt *dev_ctxt)
 		rc = VCD_ERR_FAIL;
 	return rc;
 }
-
