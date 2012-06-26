@@ -198,18 +198,6 @@ static int mdp4_dtv_start(struct msm_fb_data_type *mfd)
 	/* Test pattern 8 x 8 pixel */
 	/* MDP_OUTP(MDP_BASE + DTV_BASE + 0x4C, 0x80000808); */
 
-	/*MHL v1.1 compliance test, Test3.2.3.2 Test3.2.3.4*/
-	if((var->yres == 480) || (var->yres == 576)){
-		if(var->xres == 640 && var->yres == 480)
-				mdp4_set_limit_range(false);
-		else
-				mdp4_set_limit_range(true);
-	}
-	else
-		mdp4_set_limit_range(false);
-
-	/* enable DTV block */
-	MDP_OUTP(MDP_BASE + DTV_BASE, 1);
 	mdp_pipe_ctrl(MDP_OVERLAY1_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
@@ -508,7 +496,6 @@ void mdp4_overlay_dtv_start(void)
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 		/* enable DTV block */
 		MDP_OUTP(MDP_BASE + DTV_BASE, 1);
-		mdp_pipe_ctrl(MDP_OVERLAY1_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 		dtv_enabled = 1;
 	}
