@@ -642,10 +642,12 @@ static ssize_t atmel_unlock_store(struct device *dev,
 
 	printk(KERN_INFO "[TP]unlock change to %d\n", unlock);
 
+	if (!ts_data->unlock_attr)
+		return count;
+
 	if ((unlock == 2 || unlock == 3) &&
 		(ts_data->first_pressed || ts_data->finger_count) &&
-		ts_data->pre_data[0] < RECALIB_UNLOCK &&
-		ts_data->unlock_attr) {
+		ts_data->pre_data[0] < RECALIB_UNLOCK) {
 
 		ts_data->valid_press_timeout = jiffies + msecs_to_jiffies(15);
 		if (ts_data->finger_count == 0)
@@ -1074,53 +1076,64 @@ static void msg_process_multitouch(struct atmel_ts_data *ts, uint8_t *data, uint
 
 		if (ts->grip_suppression & BIT(idx))
 			ts->grip_suppression &= ~BIT(idx);
-		if (ts->finger_pressed & BIT(idx)) {
-			if (ts->report_type == SYN_AND_REPORT_TYPE_B) {
-				input_mt_slot(ts->input_dev, idx);
-				input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
-				input_sync(ts->input_dev);
-			}
 
-			if (!ts->finger_count)
-				printk(KERN_ERR "[TP]TOUCH_ERR: finger count has reached zero\n");
-			else
-				ts->finger_count--;
-			ts->finger_pressed &= ~BIT(idx);
-			if (!ts->first_pressed) {
-				if (!ts->finger_count)
-					ts->first_pressed = 1;
-				printk(KERN_INFO "[TP]E%d@%d,%d\n",
-					idx + 1, ts->finger_data[idx].x, ts->finger_data[idx].y);
-			}
-			if (ts->pre_data[0] < RECALIB_DONE) {
-				if (ts->finger_count == 0) {
-					if (ts->pre_data[0] == RECALIB_NEED &&
-						!ts->unlock_attr && idx == 0) {
-							/* recalibrate on last release */
-							restore_normal_threshold(ts);
-							confirm_calibration(ts, 1, 0);
-					} else if (ts->pre_data[0] == RECALIB_UNLOCK &&
-						ts->unlock_attr && idx == 0 &&
-						time_after(jiffies, ts->valid_press_timeout)) {
-						ts->valid_pressed_cnt++;
-						if (ts->pre_data[0] == RECALIB_UNLOCK &&
-							ts->valid_pressed_cnt > 2) {
-							cancel_delayed_work_sync(&ts->unlock_work);
-							if (ts->pre_data[0] == RECALIB_UNLOCK)
-								confirm_calibration(ts, 0, 1);
-						}
-					} else if (ts->pre_data[0] == RECALIB_NG)
-						ts->pre_data[0] = RECALIB_NEED;
-				} else {
-					if (ts->pre_data[0] < RECALIB_UNLOCK)
-						i2c_atmel_write_byte_data(ts->client,
-							get_object_address(ts, GEN_COMMANDPROCESSOR_T6) +
-							T6_CFG_CALIBRATE, 0x55);
-				}
-			}
+		if (!(ts->finger_pressed & BIT(idx)))
+			/* end since finger was not pressed */
+			return;
+
+		if (ts->report_type == SYN_AND_REPORT_TYPE_B) {
+			input_mt_slot(ts->input_dev, idx);
+			input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
+			input_sync(ts->input_dev);
 		}
-	} else if ((data[T9_MSG_STATUS] & (T9_MSG_STATUS_DETECT|T9_MSG_STATUS_PRESS)) &&
-		!(ts->finger_pressed & BIT(idx))) {
+
+		if (ts->finger_count == 0)
+			printk(KERN_ERR "[TP]TOUCH_ERR: finger count has reached zero\n");
+		else
+			ts->finger_count--;
+		ts->finger_pressed &= ~BIT(idx);
+
+		if (!ts->first_pressed) {
+			if (ts->finger_count == 0)
+				ts->first_pressed = 1;
+			printk(KERN_INFO "[TP]E%d@%d,%d\n",
+				idx + 1, ts->finger_data[idx].x, ts->finger_data[idx].y);
+		}
+
+		switch (ts->pre_data[0]) {
+			case RECALIB_NEED:
+				if (ts->finger_count == 0 && !ts->unlock_attr && idx == 0) {
+					/* recalibrate on last release */
+					restore_normal_threshold(ts);
+					confirm_calibration(ts, 1, 0);
+				}
+				break;
+			case RECALIB_UNLOCK:
+				if (ts->finger_count) {
+					i2c_atmel_write_byte_data(ts->client,
+						get_object_address(ts, GEN_COMMANDPROCESSOR_T6) +
+						T6_CFG_CALIBRATE, 0x55);
+				} else if (ts->unlock_attr && idx == 0 &&
+						time_after(jiffies, ts->valid_press_timeout)) {
+					ts->valid_pressed_cnt++;
+					if (ts->valid_pressed_cnt > 2) {
+						cancel_delayed_work_sync(&ts->unlock_work);
+						confirm_calibration(ts, 0, 1);
+					}
+				}
+				break;
+			case RECALIB_NG:
+				if (ts->finger_count == 0)
+					ts->pre_data[0] = RECALIB_NEED;
+				break;
+			default:
+				break;
+		}
+	} else if (data[T9_MSG_STATUS] & (T9_MSG_STATUS_DETECT|T9_MSG_STATUS_PRESS)) {
+		if (ts->finger_pressed & BIT(idx))
+			/* end since finger is already pressed */
+			return;
+
 		if (ts->filter_level[0]) {
 			if (ts->finger_data[idx].x < ts->filter_level[FL_XLOGRIPMIN] ||
 				ts->finger_data[idx].x > ts->filter_level[FL_XHIGRIPMAX])
@@ -1133,28 +1146,32 @@ static void msg_process_multitouch(struct atmel_ts_data *ts, uint8_t *data, uint
 				ts->finger_data[idx].x < ts->filter_level[FL_XHIGRIPMIN])
 				ts->grip_suppression &= ~BIT(idx);
 		}
+
 		if (!(ts->grip_suppression & BIT(idx))) {
-			if (!ts->first_pressed)
-				printk(KERN_INFO "[TP]S%d@%d,%d\n",
-					idx + 1, ts->finger_data[idx].x, ts->finger_data[idx].y);
-			if (ts->finger_count >= ts->finger_support)
-				printk(KERN_ERR "[TP]TOUCH_ERR: finger count has reached max\n");
-			else
-				ts->finger_count++;
 			ts->finger_pressed |= BIT(idx);
-			if (ts->pre_data[0] < RECALIB_DONE) {
-				if (ts->pre_data[0] < RECALIB_UNLOCK) {
+
+			if (ts->finger_count < ts->finger_support)
+				ts->finger_count++;
+
+			switch (ts->pre_data[0]) {
+				case RECALIB_UNLOCK:
+					if (ts->unlock_attr && ts->finger_count > 1)
+						ts->valid_pressed_cnt = 0;
+					break;
+				case RECALIB_NG:
+				case RECALIB_NEED:
 					ts->pre_data[idx + 1] = ts->finger_data[idx].y;
-					if (ts->finger_count == ts->finger_support)
+					if (ts->finger_count == ts->finger_support) {
 						i2c_atmel_write_byte_data(ts->client,
 							get_object_address(ts, GEN_COMMANDPROCESSOR_T6) +
 							T6_CFG_CALIBRATE, 0x55);
-					else if (ts->finger_count > 1 &&
-						ts->pre_data[0] == RECALIB_NEED)
-						ts->pre_data[0] = RECALIB_NG;
-				} else if (ts->pre_data[0] == RECALIB_UNLOCK && ts->unlock_attr)
-					if (ts->finger_count > 1)
-						ts->valid_pressed_cnt = 0;
+					} else if (ts->finger_count > 1) {
+						if (ts->pre_data[0] == RECALIB_NEED)
+							ts->pre_data[0] = RECALIB_NG;
+					}
+					break;
+				default:
+					break;
 			}
 		}
 	}
