@@ -280,6 +280,7 @@ static void check_vbus_in(struct work_struct *w)
 /* export function */
 void release_audio_dock_lock(void)
 {
+#ifdef CONFIG_CABLE_DETECT_FIVE_POGOPIN_AUDIO_DOCK
 	/* in current case, only audio dock use this mechanism.
 		This function will enable id pin irq*/
 	int value;
@@ -295,6 +296,7 @@ void release_audio_dock_lock(void)
 	value = gpio_get_value(pInfo->usb_id_pin_gpio);
 	set_irq_type(pInfo->idpin_irq, value ? IRQF_TRIGGER_HIGH: IRQF_TRIGGER_LOW);	/* trigger irq to detect current status immediately */
 	enable_irq(pInfo->idpin_irq);
+#endif
 }
 EXPORT_SYMBOL(release_audio_dock_lock);
 
@@ -606,8 +608,10 @@ static int second_detect(struct cable_detect_info *pInfo)
 #else
 		type = DOCK_STATE_UNDEFINED;
 #endif
+#ifdef CONFIG_CABLE_DETECT_FIVE_POGOPIN_AUDIO_DOCK
 	else if(adc_value >= 1021 && adc_value <= 1224)
 		type = DOCK_STATE_AUDIO_DOCK;
+#endif
 	else
 #if (defined(CONFIG_USB_OTG) && defined(CONFIG_USB_OTG_HOST))
 		type = DOCK_STATE_USB_HOST;
@@ -658,8 +662,9 @@ static irqreturn_t usbid_interrupt(int irq, void *data)
 	pInfo->cable_redetect = 0;
 	queue_delayed_work(pInfo->cable_detect_wq,
 		&pInfo->cable_detect_work, ADC_DELAY);
-
+#if 0
 	wake_lock_timeout(&pInfo->cable_detect_wlock, HZ*2);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -1185,7 +1190,7 @@ static void usb_status_notifier_func(int cable_type)
 			if (pInfo->accessory_type == DOCK_STATE_AUDIO_DOCK)
 				headset_ext_detect(USB_AUDIO_OUT);
 			else {
-				CABLE_INFO("latest accessory type is %d stop to notify audio dock\n",pInfo->accessory_type);
+				CABLE_INFO("latest accessory type is %d stop to notify audio dock\n", pInfo->accessory_type);
 				pInfo->audio_dock_lock = 0;
 			}
 #endif

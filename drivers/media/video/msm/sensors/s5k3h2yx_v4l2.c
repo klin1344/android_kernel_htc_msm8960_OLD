@@ -782,14 +782,16 @@ static struct msm_sensor_id_info_t s5k3h2yx_id_info = {
 static struct msm_sensor_exp_gain_info_t s5k3h2yx_exp_gain_info = {
 	.coarse_int_time_addr = 0x202,
 	.global_gain_addr = 0x204,
-	.vert_offset = 4,
+	.vert_offset = 16,
 	.min_vert = 4, /* min coarse integration time */ /* HTC Angie 20111019 - Fix FPS */
+	.sensor_max_linecount = 65519, /* sensor max linecount = max unsigned value of linecount register size - vert_offset */ /* HTC ben 20120229 */
 };
 
+/* HTC_START Awii 20120306 */
 static uint32_t vcm_clib;
 static uint16_t vcm_clib_min,vcm_clib_med,vcm_clib_max;
 
-static void s5k3h2yx_read_vcm_clib(struct msm_sensor_ctrl_t *s_ctrl)
+static int s5k3h2yx_read_vcm_clib(struct sensor_cfg_data *cdata, struct msm_sensor_ctrl_t *s_ctrl)
 {
 	uint8_t rc=0;
 	unsigned short info_value = 0;
@@ -932,18 +934,22 @@ static void s5k3h2yx_read_vcm_clib(struct msm_sensor_ctrl_t *s_ctrl)
 		  vcm_clib_max=DEFAULT_VCM_MAX;
 		}
 
+    cdata->cfg.calib_vcm_pos.min=vcm_clib_min;
+    cdata->cfg.calib_vcm_pos.med=vcm_clib_med;
+    cdata->cfg.calib_vcm_pos.max=vcm_clib_max;
 
 	pr_info("%s: VCM clib=0x%x, min/med/max=%d %d %d\n"
-		, __func__, vcm_clib, vcm_clib_min, vcm_clib_med, vcm_clib_max);
+		, __func__, vcm_clib, cdata->cfg.calib_vcm_pos.min, cdata->cfg.calib_vcm_pos.med, cdata->cfg.calib_vcm_pos.max);
 
-	return;
+	return 0;
 
 }
+/* HTC_END*/
 
 
 static int lens_info;	//	IR: 5;	BG: 6;
 
-static int s5k3h2yx_read_lens_info(struct msm_sensor_ctrl_t *s_ctrl)
+static void s5k3h2yx_read_lens_info(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	int32_t  rc;
 	int page = 0;
@@ -1036,7 +1042,7 @@ get_done:
 	if (OTP[1] == 5)	// IR
 		lens_info = OTP[1];
 
-	return lens_info;
+	return;
 }
 
 static int s5k3h2yx_sensor_config(void __user *argp)
@@ -1071,7 +1077,7 @@ static int s5k3h2yx_sensor_open_init(const struct msm_camera_sensor_info *data)
 		S5K3H2YX_REG_READ_MODE, value, MSM_CAMERA_I2C_BYTE_DATA);
 
 	s5k3h2yx_read_lens_info(&s5k3h2yx_s_ctrl);
-	s5k3h2yx_read_vcm_clib(&s5k3h2yx_s_ctrl);
+//	s5k3h2yx_read_vcm_clib(NULL,&s5k3h2yx_s_ctrl);
 
 	return rc;
 }
@@ -1109,6 +1115,7 @@ static ssize_t lens_info_show(struct device *dev,
 	return ret;
 }
 
+#if 0
 static ssize_t vcm_clib_show(struct device *dev,
   struct device_attribute *attr, char *buf)
 {
@@ -1152,12 +1159,15 @@ static ssize_t vcm_clib_max_show(struct device *dev,
 
 	return ret;
 }
+#endif
 static DEVICE_ATTR(sensor, 0444, sensor_vendor_show, NULL);
 static DEVICE_ATTR(lensinfo, 0444, lens_info_show, NULL);
+#if 0
 static DEVICE_ATTR(vcmclib, 0444, vcm_clib_show, NULL);
 static DEVICE_ATTR(vcmclibmin, 0444, vcm_clib_min_show, NULL);
 static DEVICE_ATTR(vcmclibmed, 0444, vcm_clib_med_show, NULL);
 static DEVICE_ATTR(vcmclibmax, 0444, vcm_clib_max_show, NULL);
+#endif
 
 static struct kobject *android_s5k3h2yx;
 
@@ -1185,6 +1195,7 @@ static int s5k3h2yx_sysfs_init(void)
 		pr_info("s5k3h2yx_sysfs_init: dev_attr_lensinfo failed\n");
 		kobject_del(android_s5k3h2yx);
 	}
+#if 0
 	pr_info("s5k3h2yx:sysfs_create_file vcmclib\n");
 	ret = sysfs_create_file(android_s5k3h2yx, &dev_attr_vcmclib.attr);
 	if (ret) {
@@ -1209,7 +1220,7 @@ static int s5k3h2yx_sysfs_init(void)
 		pr_info("s5k3h2yx_sysfs_init: dev_attr_vcmclibmax failed\n");
 		kobject_del(android_s5k3h2yx);
 	}
-
+#endif
 	return 0 ;
 }
 
@@ -1481,8 +1492,10 @@ static struct msm_sensor_fn_t s5k3h2yx_func_tbl = {
 	.sensor_power_up = s5k3h2yx_power_up,
 	.sensor_power_down = s5k3h2yx_power_down,
 	.sensor_probe = msm_sensor_probe,
-	.sensor_read_lens_info = s5k3h2yx_read_lens_info,
 	.sensor_i2c_read_fuseid = s5k3h2yx_read_fuseid,
+	/* HTC_START Awii 20120306 */
+	.sensor_i2c_read_vcm_clib = s5k3h2yx_read_vcm_clib,
+	/* HTC_END*/
 };
 
 static struct msm_sensor_reg_t s5k3h2yx_regs = {

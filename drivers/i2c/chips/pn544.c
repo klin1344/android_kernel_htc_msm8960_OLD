@@ -348,21 +348,21 @@ static long pn544_dev_ioctl(struct file *filp,
 			gpio_set_value(pni->firm_gpio, 1);
 			msleep(50);
 			pn544_Disable();
-			msleep(300);
+			msleep(50);
 			pn544_Enable();
 			msleep(50);
 		} else if (arg == 1) {
 			/* power on */
-			I("%s power on\n", __func__);
+			I("%s power on (delay50)\n", __func__);
 			gpio_set_value(pni->firm_gpio, 0);
 			pn544_Enable();
 			msleep(50);
 		} else  if (arg == 0) {
 			/* power off */
-			I("%s power off\n", __func__);
+			I("%s power off (delay50)\n", __func__);
 			gpio_set_value(pni->firm_gpio, 0);
 			pn544_Disable();
-			msleep(300);
+			msleep(50);
 		} else {
 			E("%s bad arg %lu\n", __func__, arg);
 			goto fail;

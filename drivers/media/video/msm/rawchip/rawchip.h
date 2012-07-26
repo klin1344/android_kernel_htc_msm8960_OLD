@@ -74,7 +74,6 @@ struct rawchip_sensor_data {
 	uint16_t y_even_inc;
 	uint16_t y_odd_inc;
 	uint8_t binning_rawchip;
-	uint8_t lens_info;	//	IR: 5;	BG: 6;
 };
 
 struct rawchip_id_info_t {

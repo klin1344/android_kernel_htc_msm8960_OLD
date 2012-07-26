@@ -3784,7 +3784,6 @@ int Yushan_sensor_open_init(struct rawchip_sensor_init_data data)
 	Yushan_DXO_DOP_Tuning_t sDxoDopTuning;
 	Yushan_SystemStatus_t			sSystemStatus;
 	uint32_t		udwIntrMask[] = {0x7DE38E3B, 0xA600007C, 0x000DBFFD};	// DXO_DOP_NEW_FR_PR enabled
-	struct yushan_reg_t *p_yushan_reg = &(yushan_regs);
 #if 0
 	Yushan_AF_ROI_t					sYushanAfRoi[5];
 	Yushan_DXO_ROI_Active_Number_t	sYushanDxoRoiActiveNumber;
@@ -3826,32 +3825,27 @@ int Yushan_sensor_open_init(struct rawchip_sensor_init_data data)
 #endif
 
 #ifndef COLOR_BAR
-	pr_info("[CAM] %s: lens_info(%d)\n", __func__, data.lens_info);
-	if (data.lens_info == 5) {
-		p_yushan_reg = &(yushan_ir_regs);
-	} else {
-		p_yushan_reg = &(yushan_regs);
-	}
-	sDxoStruct.pDxoPdpRamImage[0] = (uint8_t *)(p_yushan_reg->pdpcode);
-	sDxoStruct.pDxoDppRamImage[0] = (uint8_t *)(p_yushan_reg->dppcode);
-	sDxoStruct.pDxoDopRamImage[0] = (uint8_t *)(p_yushan_reg->dopcode);
-	sDxoStruct.pDxoPdpRamImage[1] = (uint8_t *)(p_yushan_reg->pdpclib);
-	sDxoStruct.pDxoDppRamImage[1] = (uint8_t *)(p_yushan_reg->dppclib);
-	sDxoStruct.pDxoDopRamImage[1] = (uint8_t *)(p_yushan_reg->dopclib);
+	sDxoStruct.pDxoPdpRamImage[0] = (uint8_t *)yushan_regs.pdpcode;
+	sDxoStruct.pDxoDppRamImage[0] = (uint8_t *)yushan_regs.dppcode;
+	sDxoStruct.pDxoDopRamImage[0] = (uint8_t *)yushan_regs.dopcode;
+	sDxoStruct.pDxoPdpRamImage[1] = (uint8_t *)yushan_regs.pdpclib;
+	sDxoStruct.pDxoDppRamImage[1] = (uint8_t *)yushan_regs.dppclib;
+	sDxoStruct.pDxoDopRamImage[1] = (uint8_t *)yushan_regs.dopclib;
 
-	sDxoStruct.uwDxoPdpRamImageSize[0] = p_yushan_reg->pdpcode_size;
-	sDxoStruct.uwDxoDppRamImageSize[0] = p_yushan_reg->dppcode_size;
-	sDxoStruct.uwDxoDopRamImageSize[0] = p_yushan_reg->dopcode_size;
-	sDxoStruct.uwDxoPdpRamImageSize[1] = p_yushan_reg->pdpclib_size;
-	sDxoStruct.uwDxoDppRamImageSize[1] = p_yushan_reg->dppclib_size;
-	sDxoStruct.uwDxoDopRamImageSize[1] = p_yushan_reg->dopclib_size;
+	sDxoStruct.uwDxoPdpRamImageSize[0] = yushan_regs.pdpcode_size;
+	sDxoStruct.uwDxoDppRamImageSize[0] = yushan_regs.dppcode_size;
+	sDxoStruct.uwDxoDopRamImageSize[0] = yushan_regs.dopcode_size;
+	sDxoStruct.uwDxoPdpRamImageSize[1] = yushan_regs.pdpclib_size;
+	sDxoStruct.uwDxoDppRamImageSize[1] = yushan_regs.dppclib_size;
+	sDxoStruct.uwDxoDopRamImageSize[1] = yushan_regs.dopclib_size;
 
-	sDxoStruct.uwBaseAddrPdpMicroCode[0] = p_yushan_reg->pdpcode->addr;
-	sDxoStruct.uwBaseAddrDppMicroCode[0] = p_yushan_reg->dppcode->addr;
-	sDxoStruct.uwBaseAddrDopMicroCode[0] = p_yushan_reg->dopcode->addr;
-	sDxoStruct.uwBaseAddrPdpMicroCode[1] = p_yushan_reg->pdpclib->addr;
-	sDxoStruct.uwBaseAddrDppMicroCode[1] = p_yushan_reg->dppclib->addr;
-	sDxoStruct.uwBaseAddrDopMicroCode[1] = p_yushan_reg->dopclib->addr;
+	sDxoStruct.uwBaseAddrPdpMicroCode[0] = yushan_regs.pdpcode->addr;
+	sDxoStruct.uwBaseAddrDppMicroCode[0] = yushan_regs.dppcode->addr;
+	sDxoStruct.uwBaseAddrDopMicroCode[0] = yushan_regs.dopcode->addr;
+	sDxoStruct.uwBaseAddrPdpMicroCode[1] = yushan_regs.pdpclib->addr;
+	sDxoStruct.uwBaseAddrDppMicroCode[1] = yushan_regs.dppclib->addr;
+	sDxoStruct.uwBaseAddrDopMicroCode[1] = yushan_regs.dopclib->addr;
+
 #if 0
 	pr_info("/*---------------------------------------*\\");
 	pr_info("array base ADDRs %d %d %d %d %d %d",

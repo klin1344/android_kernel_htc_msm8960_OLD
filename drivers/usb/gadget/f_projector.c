@@ -28,6 +28,11 @@
 #include <linux/wakelock.h>
 #include <linux/htc_mode_server.h>
 #include <linux/random.h>
+
+#ifdef DUMMY_DISPLAY_MODE
+#include "f_projector_debug.h"
+#endif
+
 #ifdef DBG
 #undef DBG
 #endif
@@ -375,12 +380,20 @@ static void send_fb(struct projector_dev *dev)
 {
 
 	struct usb_request *req;
-	char *frame;
 	int xfer;
 	int count = dev->framesize;
+#ifdef DUMMY_DISPLAY_MODE
+	unsigned short *frame;
+#else
+	char *frame;
+#endif
 
+
+#ifdef DUMMY_DISPLAY_MODE
+	frame = test_frame;
+#else
 	frame = get_fb1_addr();
-
+#endif
 	if (frame == NULL)
 		return;
 
@@ -396,8 +409,13 @@ static void send_fb(struct projector_dev *dev)
 					__func__, req);
 				break;
 			}
+
 			count -= xfer;
+#ifdef DUMMY_DISPLAY_MODE
+			frame += xfer/2;
+#else
 			frame += xfer;
+#endif
 		} else {
 			printk(KERN_ERR "send_fb: no req to send\n");
 			break;
@@ -408,11 +426,22 @@ static void send_fb(struct projector_dev *dev)
 static void send_fb2(struct projector_dev *dev)
 {
 	struct usb_request *req;
-	char *frame = get_fb1_addr();
 	int xfer;
+
+#ifdef DUMMY_DISPLAY_MODE
+	unsigned short *frame;
+	int count = dev->framesize;
+#else
+	char *frame;
 	int count = dev->htcmode_proto->server_info.width *
 				dev->htcmode_proto->server_info.height * (BITSPIXEL / 8);
+#endif
 
+#ifdef DUMMY_DISPLAY_MODE
+	frame = test_frame;
+#else
+	frame = get_fb1_addr();
+#endif
 	if (frame == NULL)
 		return;
 
@@ -436,7 +465,11 @@ static void send_fb2(struct projector_dev *dev)
 				break;
 			}
 			count -= xfer;
+#ifdef DUMMY_DISPLAY_MODE
+			frame += xfer/2;
+#else
 			frame += xfer;
+#endif
 		} else {
 			printk(KERN_ERR "send_fb: no req to send\n");
 			break;
@@ -464,13 +497,6 @@ static void send_info(struct projector_dev *dev)
 		req->length = 20;
 		memcpy(req->buf, "okay", 4);
 		memcpy(req->buf + 4, &dev->bitsPixel, 4);
-		#if defined(CONFIG_MACH_PARADISE)
-		if (machine_is_paradise()) {
-			ctxt->framesize = 320 * 480 * 2;
-			printk(KERN_INFO "send_info: framesize %d\n",
-				ctxt->framesize);
-		}
-		#endif
 		memcpy(req->buf + 8, &dev->framesize, 4);
 		memcpy(req->buf + 12, &dev->width, 4);
 		memcpy(req->buf + 16, &dev->height, 4);
@@ -502,7 +528,6 @@ static void send_server_info(struct projector_dev *dev)
 	}
 }
 
-
 static void send_server_nonce(struct projector_dev *dev)
 {
 	struct usb_request *req;
@@ -524,8 +549,6 @@ static void send_server_nonce(struct projector_dev *dev)
 		printk(KERN_INFO "%s: no req to send\n", __func__);
 	}
 }
-
-
 
 struct size rotate(struct size v)
 {
@@ -595,8 +618,8 @@ static void projector_get_msmfb(struct projector_dev *dev)
 	dev->height = fb_info.yres;
 	dev->fbaddr = get_fb1_addr();
 	dev->framesize = dev->width * dev->height * (dev->bitsPixel / 8);
-	printk(KERN_INFO "projector: width %d, height %d %d\n",
-		   fb_info.xres, fb_info.yres, dev->framesize);
+	printk(KERN_INFO "projector: width %d, height %d framesize %d, %p\n",
+		   fb_info.xres, fb_info.yres, dev->framesize, dev->fbaddr);
 }
 
 /*
@@ -699,17 +722,21 @@ static void projector_complete_out(struct usb_ep *ep, struct usb_request *req)
 		mouse_data[0] = *((int *)(req->buf));
 
 		if (!strncmp("init", data, 4)) {
-			if (!dev->init_done) {
-				projector_get_msmfb(dev);
-				dev->init_done = 1;
 
-				dev->width = DEFAULT_PROJ_WIDTH;
-				dev->height = DEFAULT_PROJ_HEIGHT;
-				dev->framesize = dev->width * dev->height * (BITSPIXEL / 8);
-			}
+			dev->init_done = 1;
+			dev->bitsPixel = BITSPIXEL;
+			dev->width = DEFAULT_PROJ_WIDTH;
+			dev->height = DEFAULT_PROJ_HEIGHT;
+			dev->framesize = dev->width * dev->height * (BITSPIXEL / 8);
+
 			send_info(dev);
 			/* system wake code */
 			projector_send_Key_event(dev, 0);
+
+			atomic_set( &htc_mode_status, HTC_MODE_RUNNING);
+			htc_mode_info("init current htc_mode_status = %d\n",
+			    atomic_read(&htc_mode_status));
+			schedule_work(&dev->htcmode_notifier_work);
 		} else if (*data == ' ') {
 			send_fb(dev);
 			dev->frame_count++;
@@ -951,6 +978,35 @@ static int projector_keypad_init(struct projector_dev *dev)
 	return 0;
 }
 
+/* TODO: It's the way tools to enable projector */
+#if 0
+static ssize_t store_enable(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	int _enabled, ret;
+	ret = strict_strtol(buf, 10, (unsigned long *)&_enabled);
+	if (ret < 0) {
+		printk(KERN_INFO "%s: %d\n", __func__, ret);
+		return 0;
+	}
+	printk(KERN_INFO "projector: %d\n", _enabled);
+
+	android_enable_function(&_projector_dev.function, _enabled);
+	_projector_dev.enabled = _enabled;
+	return count;
+}
+
+static ssize_t show_enable(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	buf[0] = '0' + _projector_dev.enabled;
+	buf[1] = '\n';
+	return 2;
+
+}
+static DEVICE_ATTR(enable, 0664, show_enable, store_enable);
+#endif
+
 
 static void cand_online_notify(struct work_struct *w)
 {
@@ -1074,13 +1130,11 @@ static int projector_bind_config(struct usb_configuration *c,
 	DBG("%s\n", __func__);
 	dev = projector_dev;
 
-	if (projector_string_defs[0].id == 0) {
-		ret = usb_string_id(c->cdev);
-		if (ret < 0)
-			return ret;
-		projector_string_defs[0].id = ret;
-		projector_interface_desc.iInterface = ret;
-	}
+	ret = usb_string_id(c->cdev);
+	if (ret < 0)
+		goto err_free;
+	projector_string_defs[0].id = ret;
+	projector_interface_desc.iInterface = ret;
 
 	dev->cdev = c->cdev;
 	dev->function.name = "projector";
@@ -1127,6 +1181,9 @@ static int projector_bind_config(struct usb_configuration *c,
 	dev->frame_count = 0;
 	dev->is_htcmode = 0;
 	dev->htcmode_proto = config;
+	dev->htcmode_proto->server_info.height = DEFAULT_PROJ_HEIGHT;
+	dev->htcmode_proto->server_info.width = DEFAULT_PROJ_WIDTH;
+	dev->htcmode_proto->client_info.display_conf = 0;
 
 	return 0;
 

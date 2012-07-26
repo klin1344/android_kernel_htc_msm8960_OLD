@@ -316,7 +316,6 @@ struct yushan_reg_t {
 };
 
 extern struct yushan_reg_t yushan_regs;
-extern struct yushan_reg_t yushan_ir_regs;
 
 
 
@@ -633,7 +632,6 @@ struct rawchip_sensor_init_data {
 	uint16_t y_even_inc;
 	uint16_t y_odd_inc;
 	uint8_t binning_rawchip;
-	uint8_t lens_info;	//	IR: 5;	BG: 6;
 };
 
 typedef enum {

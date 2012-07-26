@@ -126,7 +126,6 @@ int rawchip_set_size(struct rawchip_sensor_data data)
 		rawchip_init_data.y_even_inc = data.y_even_inc;
 		rawchip_init_data.y_odd_inc = data.y_odd_inc;
 		rawchip_init_data.binning_rawchip = data.binning_rawchip;
-		rawchip_init_data.lens_info = data.lens_info;
 
 		pr_info("[CAM] rawchip init spi_clk=%d ext_clk=%d lane_cnt=%d bitrate=%d %d %d %d %d\n",
 			rawchip_init_data.spi_clk, rawchip_init_data.ext_clk,

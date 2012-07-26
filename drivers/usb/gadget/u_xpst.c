@@ -373,7 +373,10 @@ static long htc_diag_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 #endif
 		htc_usb_enable_function(DIAG_LEGACY, tmp_value);
 
-		diag_smd_enable(driver->ch, "diag_ioctl", tmp_value);
+		if (tmp_value) {
+			/* Never close SMD channel */
+			diag_smd_enable(driver->ch, "diag_ioctl", tmp_value);
+		}
 #if defined(CONFIG_MACH_MECHA)
 		/* internal hub*/
 		smsc251x_mdm_port_sw(tmp_value);
@@ -404,6 +407,12 @@ static long htc_diag_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 		/*	if (copy_from_user(&ctxt->is2ARM11, argp, sizeof(int)))
 			return -EFAULT;*/
 		DIAG_INFO("diag: fix me USB_DIAG_FUNC_IOC_AMR_SET\n");
+		break;
+	case USB_DIAG_FUNC_IOC_LOGTYPE_GET:
+		/* to see if logging mode = 1 (USB_MODE) */
+		tmp_value = (driver->logging_mode == 1)?1:0;
+		if (copy_to_user(argp, &tmp_value, sizeof(tmp_value)))
+			return -EFAULT;
 		break;
 	default:
 		return -ENOTTY;
@@ -867,6 +876,10 @@ static int diag2arm9_open(struct inode *ip, struct file *fp)
 	ctxt->diag2arm9_opened = true;
 
 	diag_smd_enable(driver->ch, "diag2arm9_open", SMD_FUNC_OPEN_DIAG);
+
+	/* Active the diag buffer */
+	driver->in_busy_1 = 0;
+	driver->in_busy_2 = 0;
 #if defined(CONFIG_MACH_VIGOR)
 	diag2arm9_buf_9k = kzalloc(USB_MAX_OUT_BUF, GFP_KERNEL);
 #endif

@@ -104,7 +104,6 @@ static void pm8xxx_vib_enable(struct timed_output_dev *dev, int value)
 	VIB_PWM_INFO("%s vibrate period: %d msec\n",__func__,value);
 
 retry:
-
 	if (hrtimer_try_to_cancel(&vib->vib_timer) < 0) {
 		cpu_relax();
 		goto retry;
@@ -115,10 +114,10 @@ retry:
 	else {
 		value = (value > vib->pdata->max_timeout_ms ?
 				 vib->pdata->max_timeout_ms : value);
-                pm8xxx_vib_set_on(vib);
 		hrtimer_start(&vib->vib_timer,
 			      ktime_set(value / 1000, (value % 1000) * 1000000),
 			      HRTIMER_MODE_REL);
+		pm8xxx_vib_set_on(vib);
 	}
 }
 
@@ -146,13 +145,11 @@ static enum hrtimer_restart pm8xxx_vib_timer_func(struct hrtimer *timer)
 	struct pm8xxx_vib_pwm *vib = container_of(timer, struct pm8xxx_vib_pwm,
 							 vib_timer);
 	VIB_PWM_INFO("%s \n",__func__);
-
 	rc = gpio_direction_output(vib->ena_gpio, DISABLE_AMP);
-	if (rc < 0) {
-		VIB_PWM_ERR("%s disable amp fail",__func__);
-	}
+			if (rc < 0) {
+				VIB_PWM_ERR("%s disable amp fail",__func__);
+			}
 	schedule_work(&vib->work);
-
 	return HRTIMER_NORESTART;
 }
 

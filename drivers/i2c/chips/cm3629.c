@@ -114,8 +114,6 @@ struct cm3629_info {
 	uint8_t inte_ps2_canc;
 	uint8_t ps_conf1_val;
 	uint8_t ps_conf2_val;
-	uint8_t ps_conf1_val_from_board;
-	uint8_t ps_conf2_val_from_board;
 	uint8_t ps_conf3_val;
 	uint8_t ps_calibration_rule; /* For Saga */
 	int ps_pocket_mode;
@@ -138,7 +136,6 @@ struct cm3629_info {
 	uint8_t ps2_adc_offset;
 	uint8_t ps_debounce;
 	uint16_t ps_delay_time;
-	unsigned int engineerid;
 };
 
 static uint8_t ps1_canc_set;
@@ -219,7 +216,7 @@ static int I2C_RxData_2(char *rxData, int length)
 		if (i2c_transfer(lp_info->i2c_client->adapter, msgs, 2) > 0)
 			break;
 
-		D("[PS][cm3629 warning] %s, i2c err, ISR gpio %d\n",
+		D("[PS][cm3629 error] %s, i2c err, ISR gpio %d\n",
 				__func__, lpi->intr_pin);
 		msleep(10);
 	}
@@ -249,7 +246,7 @@ static int I2C_TxData(uint16_t slaveAddr, uint8_t *txData, int length)
 		if (i2c_transfer(lp_info->i2c_client->adapter, msg, 1) > 0)
 			break;
 
-		D("[PS][cm3629 warning] %s, i2c err, slaveAddr 0x%x, register 0x%x, value 0x%x, ISR gpio%d, record_init_fail %d\n",
+		D("[PS][cm3629 error] %s, i2c err, slaveAddr 0x%x, register 0x%x, value 0x%x, ISR gpio%d, record_init_fail %d\n",
 				__func__, slaveAddr, txData[0], txData[1], lpi->intr_pin, record_init_fail);
 
 		msleep(10);
@@ -994,9 +991,6 @@ static int psensor_disable(struct cm3629_info *lpi)
 	int ret = -EIO;
 	char cmd[2];
 
-	lpi->ps_conf1_val = lpi->ps_conf1_val_from_board;
-	lpi->ps_conf2_val = lpi->ps_conf2_val_from_board;
-
 	lpi->ps_pocket_mode = 0;
 
 	D("[PS][cm3629] %s\n", __func__);
@@ -1597,7 +1591,7 @@ static ssize_t ps_i2c_show(struct device *dev,
 		"0x6L=0x%02X, 0x6H=0x%02X, 0x7L=0x%02X, 0x7H=0x%02X,\n"
 		"0x8L=0x%02X, 0x8H=0x%02X, 0x9L=0x%02X, 0x9H=0x%02X, "
 		"0xaL=0x%02X, 0xaH=0x%02X, 0xbL=0x%02X, 0xbH=0x%02X,\n"
-		"0xcL=0x%02X, 0xcH=0x%02X.\n",
+		"0xcL=0x%02X, 0xcH=0x%02X.",
 		data[0], data[1], data[2], data[3],
 		data[4], data[5], data[6], data[7],
 		data[8], data[9], data[10], data[11],
@@ -1616,29 +1610,20 @@ static ssize_t ps_i2c_store(struct device *dev,
 	char *token[10];
 	int i, ret = 0;
 	uint8_t reg = 0, value[3] = {0}, read_value[3] = {0};
-	unsigned long ul_reg = 0, ul_value[3] = {0};
 
 	printk(KERN_INFO "[CM3629_] %s\n", buf);
-
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 3; i++)
 		token[i] = strsep((char **)&buf, " ");
-		D("%s: token[%d] = %s\n", __func__, i, token[i]);
-	}
-
-	ret = strict_strtoul(token[0], 16, &ul_reg);
-	ret = strict_strtoul(token[1], 16, &(ul_value[0]));
-	ret = strict_strtoul(token[2], 16, &(ul_value[1]));
-
-	reg = ul_reg;
-	value[0] = ul_value[0];
-	value[1] = ul_value[1];
-
+	 ret = strict_strtoul(token[0], 16, (unsigned long *)&(reg));
+	 ret = strict_strtoul(token[1], 16, (unsigned long *)&(value[0]));
+	 ret = strict_strtoul(token[2], 16, (unsigned long *)&(value[1]));
 	_cm3629_I2C_Write2(lpi->cm3629_slave_address,
 		reg, value, 3);
+
 	D("[CM3629] Set REG=0x%x, value[0]=0x%x, value[1]=0x%x\n",
 	  reg, value[0], value[1]);
-
 	_cm3629_I2C_Read2(lpi->cm3629_slave_address, reg, read_value, 2);
+
 	D("[CM3629] Get REG=0x%x, value[0]=0x%x, value[1]=0x%x\n",
 	  reg, read_value[0], read_value[1]);
 
@@ -1651,7 +1636,7 @@ static ssize_t ps_i2c_store(struct device *dev,
 		D("[CM3629] NO parameter update for register 0x%02X\n", reg);
 	}
 
-	return count;
+	return ret;
 }
 static DEVICE_ATTR(ps_i2c, 0664, ps_i2c_show, ps_i2c_store);
 
@@ -1704,96 +1689,6 @@ static ssize_t ps_hw_store(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR(ps_hw, 0664, ps_hw_show, ps_hw_store);
-
-static ssize_t ps_headset_bt_plugin_show(struct device *dev,
-			struct device_attribute *attr, char *buf)
-{
-	int ret = 0;
-	struct cm3629_info *lpi = lp_info;
-
-	ret = sprintf(buf, "ps_conf1_val = 0x%02X, ps_conf2_val = 0x%02X\n",
-		      lpi->ps_conf1_val, lpi->ps_conf2_val);
-
-	return ret;
-}
-static ssize_t ps_headset_bt_plugin_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	int headset_bt_plugin = 0;
-	struct cm3629_info *lpi = lp_info;
-	char cmd[2] = {0};
-
-	sscanf(buf, "%d", &headset_bt_plugin);
-	D("[PS] %s: headset_bt_plugin = %d\n", __func__, headset_bt_plugin);
-
-	if (lpi->engineerid & 0x1) {
-		D("[PS] %s: engineerid = 0x%x.\n", __func__, lpi->engineerid);
-		return count;
-	} else {
-		if (headset_bt_plugin == 1) {
-			D("[PS][cm3629] %s, Headset or BT or Speaker ON\n", __func__);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read value => cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-
-			D("[PS][cm3629] %s, Before setting: ps_conf1_val = 0x%x\n",
-				__func__, lpi->ps_conf1_val);
-			lpi->ps_conf1_val = (CM3629_PS_DR_1_320 |
-							      CM3629_PS_IT_1_6T |
-							      CM3629_PS1_PERS_1);
-			D("[PS][cm3629] %s, After setting: ps_conf1_val = 0x%x\n",
-				__func__, lpi->ps_conf1_val);
-
-			D("[PS][cm3629] %s, Before setting: ps_conf2_val = 0x%x\n",
-				__func__, lpi->ps_conf2_val);
-			lpi->ps_conf2_val = (0x3 | CM3629_PS_ITB_1 |
-							      CM3629_PS_ITR_1);
-			D("[PS][cm3629] %s, After setting: ps_conf2_val = 0x%x\n",
-				__func__, lpi->ps_conf2_val);
-
-			cmd[0] = lpi->ps_conf1_val;
-			cmd[1] = lpi->ps_conf2_val;
-			D("[PS][cm3629] %s, write cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-			_cm3629_I2C_Write2(lpi->cm3629_slave_address,
-						 PS_config, cmd, 3);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read 0x3 cmd value after set =>"
-				" cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-		} else {
-			D("[PS][cm3629] %s, Headset or BT or Speaker OFF\n", __func__);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read value => cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-
-			lpi->ps_conf1_val = lpi->ps_conf1_val_from_board;
-			lpi->ps_conf2_val = lpi->ps_conf2_val_from_board;
-
-			cmd[0] = ((cmd[0] & 0x3) | lpi->ps_conf1_val);
-			cmd[1] = ( 0xF | lpi->ps_conf2_val);
-
-
-			D("[PS][cm3629] %s, write cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-			_cm3629_I2C_Write2(lpi->cm3629_slave_address,
-						 PS_config, cmd, 3);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read 0x3 cmd value after set =>"
-				" cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-		}
-
-	}
-
-	return count;
-}
-static DEVICE_ATTR(ps_headset_bt_plugin, 0664, ps_headset_bt_plugin_show, ps_headset_bt_plugin_store);
 
 static ssize_t ls_adc_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
@@ -2213,8 +2108,6 @@ static int cm3629_probe(struct i2c_client *client,
 	lpi->ps2_thd_set = pdata->ps2_thd_set;
 	lpi->ps_conf1_val = pdata->ps_conf1_val;
 	lpi->ps_conf2_val = pdata->ps_conf2_val;
-	lpi->ps_conf1_val_from_board = pdata->ps_conf1_val;
-	lpi->ps_conf2_val_from_board = pdata->ps_conf2_val;
 	lpi->ps_conf3_val = pdata->ps_conf3_val;
 	lpi->ps_calibration_rule = pdata->ps_calibration_rule;
 	lpi->j_start = 0;
@@ -2232,7 +2125,6 @@ static int cm3629_probe(struct i2c_client *client,
 	lpi->ps2_adc_offset = pdata->ps2_adc_offset;
 	lpi->ps_debounce = pdata->ps_debounce;
 	lpi->ps_delay_time = pdata->ps_delay_time;
-	lpi->engineerid = pdata->engineerid;
 
 	lp_info = lpi;
 
@@ -2372,10 +2264,6 @@ static int cm3629_probe(struct i2c_client *client,
 		goto err_create_ps_device;
 
 	ret = device_create_file(lpi->ps_dev, &dev_attr_ps_i2c);
-	if (ret)
-		goto err_create_ps_device;
-
-	ret = device_create_file(lpi->ps_dev, &dev_attr_ps_headset_bt_plugin);
 	if (ret)
 		goto err_create_ps_device;
 
