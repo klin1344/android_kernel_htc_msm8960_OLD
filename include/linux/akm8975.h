@@ -93,6 +93,9 @@ struct akm8975_platform_data {
 
 void akm_get_akmd_data(short *getdata);
 int  akm_get_akmd_ready(void);
+#ifdef CONFIG_MACH_JET
 extern int EWTZMU2_Report_Value(void);
+#else
+extern int EWTZMU2_Report_Value_akm(int ifirst, int x, int y, int z);
 #endif
-
+#endif
