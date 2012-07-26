@@ -253,4 +253,5 @@ extern struct platform_device msm_etb_device;
 extern struct platform_device msm_tpiu_device;
 extern struct platform_device msm_funnel_device;
 extern struct platform_device msm_etm_device;
+extern struct platform_device msm_ptm_device;
 #endif
