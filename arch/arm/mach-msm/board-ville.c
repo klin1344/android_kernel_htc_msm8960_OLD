@@ -5572,7 +5572,6 @@ static void __init register_i2c_devices(void)
 				i2c_register_board_info(MSM_8960_GSBI12_QUP_I2C_BUS_ID,
 				i2c_CM36282_TMO_EN1_devices, ARRAY_SIZE(i2c_CM36282_TMO_EN1_devices));
 				cm3629_pdata = i2c_CM36282_TMO_EN1_devices[0].platform_data;
-				cm3629_pdata->engineerid = engineerid;
 				pr_info("%s: cm36282 PL-sensor TMO EN1 system_rev %d, sku %x ",
 					 __func__, system_rev, skuid);
 			} else {
@@ -5586,7 +5585,6 @@ static void __init register_i2c_devices(void)
 				i2c_register_board_info(MSM_8960_GSBI12_QUP_I2C_BUS_ID,
 					i2c_CM36282_XD_EN1_devices, ARRAY_SIZE(i2c_CM36282_XD_EN1_devices));
 				cm3629_pdata = i2c_CM36282_XD_EN1_devices[0].platform_data;
-				cm3629_pdata->engineerid = engineerid;
 				pr_info("%s: cm36282 PL-sensor for XD and newer HW version EN1, system_rev %d ",
 					__func__, system_rev);
 			} else {
