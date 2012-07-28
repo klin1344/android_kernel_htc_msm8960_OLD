@@ -43,11 +43,14 @@ static struct {
 	const struct dev_pm_ops *pm_ops;
 	int		triggered;
 	int		smd_channel_ready;
+#ifdef CONFIG_MACH_JET
 	unsigned int	serial_number;
+#endif
 	struct wcnss_wlan_config wlan_config;
 	struct delayed_work wcnss_work;
 } *penv = NULL;
 
+#ifdef CONFIG_MACH_JET
 static ssize_t wcnss_serial_number_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -87,6 +90,7 @@ static void wcnss_remove_sysfs(struct device *dev)
 	if (dev)
 		device_remove_file(dev, &dev_attr_serial_number);
 }
+#endif
 
 static void wcnss_post_bootup(struct work_struct *work)
 {
@@ -231,6 +235,7 @@ void wcnss_wlan_unregister_pm_ops(struct device *dev,
 }
 EXPORT_SYMBOL(wcnss_wlan_unregister_pm_ops);
 
+#ifdef CONFIG_MACH_JET
 unsigned int wcnss_get_serial_number(void)
 {
 	if (penv)
@@ -238,6 +243,7 @@ unsigned int wcnss_get_serial_number(void)
 	return 0;
 }
 EXPORT_SYMBOL(wcnss_get_serial_number);
+#endif
 
 static int wcnss_wlan_suspend(struct device *dev)
 {
@@ -322,14 +328,18 @@ wcnss_trigger_config(struct platform_device *pdev)
 		goto fail_res;
 	}
 
+#ifdef CONFIG_MACH_JET
 	/* register sysfs entries */
 	ret = wcnss_create_sysfs(&pdev->dev);
 	if (ret)
 		goto fail_sysfs;
+#endif
 
 	return 0;
 
+#ifdef CONFIG_MACH_JET
 fail_sysfs:
+#endif
 fail_res:
 	if (penv->pil)
 		pil_put(penv->pil);
@@ -425,7 +435,9 @@ wcnss_wlan_probe(struct platform_device *pdev)
 static int __devexit
 wcnss_wlan_remove(struct platform_device *pdev)
 {
+#ifdef CONFIG_MACH_JET
 	wcnss_remove_sysfs(&pdev->dev);
+#endif
 	return 0;
 }
 
