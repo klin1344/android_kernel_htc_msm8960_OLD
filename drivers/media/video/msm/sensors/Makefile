@@ -14,7 +14,11 @@ obj-$(CONFIG_S5K3H2YX) += s5k3h2yx.o
 obj-$(CONFIG_S5K6AAFX) += s5k6aafx.o
 endif
 obj-$(CONFIG_S5K6A1GX) += s5k6a1gx_v4l2.o
-obj-$(CONFIG_OV8830) += ov8830_v4l2.o
+ifdef CONFIG_MACH_JET
+	obj-$(CONFIG_OV8830) += ov8830_v4l2.o
+else
+	obj-$(CONFIG_OV8830) += ov8830.o
+endif
 obj-$(CONFIG_MT9D015) += mt9d015.o mt9d015_reg.o
 obj-$(CONFIG_OV2720) += ov2720.o
 

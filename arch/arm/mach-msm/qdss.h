@@ -64,8 +64,13 @@ int tpiu_init(void);
 void tpiu_exit(void);
 int funnel_init(void);
 void funnel_exit(void);
+#ifdef CONFIG_MACH_JET
 int etm_init(void);
 void etm_exit(void);
+#else
+int ptm_init(void);
+void ptm_exit(void);
+#endif
 
 void etb_enable(void);
 void etb_disable(void);

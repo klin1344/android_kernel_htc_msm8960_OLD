@@ -140,13 +140,23 @@ static int __init qdss_init(void)
 	ret = funnel_init();
 	if (ret)
 		goto err_funnel;
+#ifdef CONFIG_MACH_JET
 	ret = etm_init();
 	if (ret)
 		goto err_etm;
+#else
+	ret = ptm_init();
+	if (ret)
+		goto err_ptm;
+#endif
 
 	pr_info("QDSS initialized\n");
 	return 0;
+#ifdef CONFIG_MACH_JET
 err_etm:
+#else
+err_ptm:
+#endif
 	funnel_exit();
 err_funnel:
 	tpiu_exit();
@@ -163,7 +173,11 @@ module_init(qdss_init);
 static void __exit qdss_exit(void)
 {
 	qdss_sysfs_exit();
+#ifdef CONFIG_MACH_JET
 	etm_exit();
+#else
+	ptm_exit();
+#endif
 	funnel_exit();
 	tpiu_exit();
 	etb_exit();
