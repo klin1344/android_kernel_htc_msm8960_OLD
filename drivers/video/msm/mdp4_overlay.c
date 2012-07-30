@@ -2257,10 +2257,6 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	int ret, mixer, perf_level;
 	struct mdp4_overlay_pipe *pipe;
-	int i;
-	int mixer0_layer = 0;
-	int video_layer = 0;
-	struct mdp4_overlay_pipe *pipe_tmp;
 
 	if (mfd == NULL) {
 		pr_err("%s: mfd == NULL, -ENODEV\n", __func__);
