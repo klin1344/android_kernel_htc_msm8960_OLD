@@ -264,7 +264,6 @@ int mdp4_dtv_off(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
 	int ret = 0;
-	unsigned int flags;
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
 
