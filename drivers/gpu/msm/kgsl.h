@@ -100,7 +100,6 @@ struct kgsl_driver {
 };
 
 extern struct kgsl_driver kgsl_driver;
-extern int ringbuffer_has_initialized;
 
 struct kgsl_pagetable;
 struct kgsl_memdesc_ops;

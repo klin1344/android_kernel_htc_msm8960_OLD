@@ -13,6 +13,7 @@
 #include <linux/vmalloc.h>
 #include <linux/memory_alloc.h>
 #include <asm/cacheflush.h>
+#include <mach/msm_rtb.h>
 
 #include "kgsl.h"
 #include "kgsl_sharedmem.h"
@@ -423,7 +424,6 @@ _kgsl_sharedmem_vmalloc(struct kgsl_memdesc *memdesc,
 
 	memdesc->sg = vmalloc(sglen * sizeof(struct scatterlist));
 	if (memdesc->sg == NULL) {
-		KGSL_CORE_ERR("[%s] vmalloc(%d) failed\n", __func__, sglen * sizeof(struct scatterlist));
 		ret = -ENOMEM;
 		goto done;
 	}
@@ -434,7 +434,6 @@ _kgsl_sharedmem_vmalloc(struct kgsl_memdesc *memdesc,
 	for (i = 0; i < memdesc->sglen; i++, ptr += PAGE_SIZE) {
 		struct page *page = vmalloc_to_page(ptr);
 		if (!page) {
-			KGSL_CORE_ERR("[%s] vmalloc_to_page failed\n", __func__);
 			ret = -EINVAL;
 			goto done;
 		}
@@ -643,7 +642,7 @@ kgsl_sharedmem_readl(const struct kgsl_memdesc *memdesc,
 
 	if (offsetbytes + sizeof(unsigned int) > memdesc->size)
 		return -ERANGE;
-
+	uncached_logk(LOGK_GRAPHICS_MMU, memdesc->hostptr + offsetbytes);
 	*dst = readl_relaxed(memdesc->hostptr + offsetbytes);
 	return 0;
 }
@@ -657,6 +656,7 @@ kgsl_sharedmem_writel(const struct kgsl_memdesc *memdesc,
 	BUG_ON(memdesc == NULL || memdesc->hostptr == NULL);
 	BUG_ON(offsetbytes + sizeof(unsigned int) > memdesc->size);
 
+	uncached_logk(LOGK_GRAPHICS_MMU, memdesc->hostptr + offsetbytes);
 	kgsl_cffdump_setmem(memdesc->gpuaddr + offsetbytes,
 		src, sizeof(uint));
 	writel_relaxed(src, memdesc->hostptr + offsetbytes);

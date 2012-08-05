@@ -157,14 +157,12 @@ static struct z180_device device_2d0 = {
 		.active_cnt = 0,
 		.iomemname = KGSL_2D0_REG_MEMORY,
 		.ftbl = &z180_functable,
-#if 0
 #ifdef CONFIG_HAS_EARLYSUSPEND
 		.display_off = {
 			.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING,
 			.suspend = kgsl_early_suspend_driver,
 			.resume = kgsl_late_resume_driver,
 		},
-#endif
 #endif
 	},
 };
@@ -197,7 +195,6 @@ static struct z180_device device_2d1 = {
 		.active_cnt = 0,
 		.iomemname = KGSL_2D1_REG_MEMORY,
 		.ftbl = &z180_functable,
-#if 0
 		.display_off = {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 			.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING,
@@ -205,7 +202,6 @@ static struct z180_device device_2d1 = {
 			.resume = kgsl_late_resume_driver,
 #endif
 		},
-#endif
 	},
 };
 
